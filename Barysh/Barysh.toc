@@ -1,0 +1,34 @@
+## Interface: 16001
+## Title: Barysh
+## Notes: Auction house scanner, deals and accounting for WoW Forever
+## Version: 0.1.0
+## SavedVariables: BaryshDB
+## SavedVariablesPerCharacter: BaryshCharDB
+
+Core\Init.lua
+Core\Errors.lua
+Core\Events.lua
+Core\Locale.lua
+Locales\enUS.lua
+Locales\ruRU.lua
+Core\Settings.lua
+Core\Modules.lua
+Core\Jobs.lua
+
+Logic\Money.lua
+Logic\Stats.lua
+Logic\Pricing.lua
+
+Data\Market.lua
+
+Modules\Scan.lua
+Modules\Tooltip.lua
+Modules\Deals.lua
+Modules\Selling.lua
+Modules\Mail.lua
+Modules\Ledger.lua
+Modules\Disenchanter.lua
+Modules\Sync.lua
+
+Core\Slash.lua
+Core\Boot.lua

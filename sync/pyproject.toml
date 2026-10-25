@@ -1,0 +1,10 @@
+[project]
+name = "barysh-sync"
+version = "0.1.0"
+description = "BaryshSync: moves Barysh addon data between WoW SavedVariables, SQLite, Google Sheets and GitHub"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.scripts]
+barysh-sync = "barysh_sync.__main__:main"

@@ -1,0 +1,22 @@
+# Game data and personal files
+Barysh/Data/Market.lua
+WTF/
+SavedVariables/
+*.lua.bak
+backups/
+exports/
+
+# BaryshSync local state
+sync/config.toml
+*.sqlite
+*.sqlite3
+*.db
+credentials*.json
+*service-account*.json
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/

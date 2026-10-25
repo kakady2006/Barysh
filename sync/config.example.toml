@@ -1,0 +1,11 @@
+# Copy to sync/config.toml (not tracked by git) and adjust if auto-detection fails.
+
+# Folder of the Forever flavor, e.g. C:\Program Files (x86)\World of Warcraft\_<flavor>_
+# game_dir = ''
+
+# SQLite database
+# database = 'C:\Users\<you>\BaryshData\barysh.sqlite'
+
+# Google Sheets (service account key file and spreadsheet id)
+# google_credentials = ''
+# spreadsheet_id = ''
