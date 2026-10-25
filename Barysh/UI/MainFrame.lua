@@ -111,8 +111,10 @@ local function build()
     frame.sub = UI.Text(frame, "GameFontDisableSmall")
     frame.sub:SetPoint("TOPLEFT", 16, -56)
 
+    frame.settings = UI.Button(frame, L.BTN_SETTINGS, 90, function() UI.ToggleSettings() end, L.TIP_SETTINGS)
+    frame.settings:SetPoint("TOPRIGHT", -16, -42)
     frame.save = UI.Button(frame, L.BTN_SAVE, 90, function() ReloadUI() end, L.TIP_SAVE)
-    frame.save:SetPoint("TOPRIGHT", -16, -42)
+    frame.save:SetPoint("RIGHT", frame.settings, "LEFT", -4, 0)
     frame.quickScan = UI.Button(frame, L.BTN_QUICK, 90, function()
         local ok, why = ns.Scan.StartQuick()
         if not ok then ns.Print(L["SCAN_FAIL_" .. why] or why) end
@@ -167,6 +169,35 @@ end
 function UI.Toggle()
     local f = UI.Frame()
     f:SetShown(not f:IsShown())
+end
+
+-- Opens the window on a tab ("Needs attention" jumps, alerts).
+function UI.Show(tabId)
+    local f = UI.Frame()
+    f:Show()
+    if tabId then UI.SelectTab(tabId) end
+end
+
+-- Docks the window next to a game window (mailbox) and opens a tab; HideNear closes it again.
+function UI.ShowNear(anchor, tabId)
+    if not anchor then return end
+    local f = UI.Frame()
+    if f:IsShown() and not f.dockedTo then
+        if tabId then UI.SelectTab(tabId) end
+        return
+    end
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 4, 0)
+    f.dockedTo = anchor
+    UI.Show(tabId)
+end
+
+function UI.HideNear(anchor)
+    local f = UI.Frame()
+    if f.dockedTo == anchor then
+        f.dockedTo = nil
+        f:Hide()
+    end
 end
 
 -- Docking to the auction house window.

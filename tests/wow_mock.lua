@@ -165,7 +165,7 @@ function GetLocale() return "ruRU" end
 function debugstack(level) return debug.traceback("", (level or 1) + 1) end
 function InCombatLockdown() return Mock.inCombat end
 function IsShiftKeyDown() return Mock.shift == true end
-function UnitName() return "Tester" end
+function UnitName(unit) if unit == "NPC" then return Mock.tradePartner end return "Tester" end
 function GetRealmName() return "TestRealm" end
 function UnitFactionGroup() return Mock.faction or "Horde" end
 function GetMoney() return Mock.money or 0 end
@@ -175,7 +175,20 @@ function ReloadUI() Mock.reloaded = true end
 function SetOverrideBindingClick(owner, prio, key, button) Mock.bindings[key] = button end
 function ClearOverrideBindings() Mock.bindings = {} end
 function GetCoinTextureString(copper) return tostring(copper) .. "c" end
-function hooksecurefunc() end
+-- hooksecurefunc("GlobalName", fn) or hooksecurefunc(table, "key", fn): fn runs after the original.
+function hooksecurefunc(a, b, c)
+    local t, key, fn = _G, a, b
+    if type(a) == "table" then t, key, fn = a, b, c end
+    local orig = t[key]
+    if not orig then return end
+    t[key] = function(...)
+        local r = { orig(...) }
+        fn(...)
+        return unpack(r)
+    end
+end
+function GetCursorInfo() return Mock.cursorKind, Mock.cursorItem end
+function ClearCursor() Mock.cursorKind, Mock.cursorItem = nil, nil end
 tinsert = table.insert
 function GetCursorPosition() return 0, 0 end
 function issecretvalue() return false end
@@ -407,3 +420,163 @@ function Mock.ShowItemTooltip(itemID)
     fn(GameTooltip, { id = itemID })
     return GameTooltip.lines
 end
+
+-- Buying, posting, own auctions ---------------------------------------------------------------
+-- Mock.commodityQuote = total price the server quotes (default: the expected one passed by the test)
+-- Mock.owned = { {auctionID, itemID, quantity, buyoutAmount, status} }
+Mock.purchases, Mock.posts, Mock.cancels, Mock.owned = {}, {}, {}, {}
+
+ItemLocation = {}
+function ItemLocation:CreateFromBagAndSlot(bag, slot) return { bagID = bag, slotIndex = slot } end
+
+local AHX = C_AuctionHouse
+function AHX.StartCommoditiesPurchase(itemID, qty)
+    Mock.purchases[#Mock.purchases + 1] = { kind = "start", itemID = itemID, qty = qty }
+    C_Timer.After(0.2, function()
+        if Mock.commodityUnavailable then
+            Mock.FireEvent("COMMODITY_PRICE_UNAVAILABLE")
+        else
+            local total = Mock.commodityQuote or 0
+            Mock.FireEvent("COMMODITY_PRICE_UPDATED", math.floor(total / qty), total)
+        end
+    end)
+end
+function AHX.ConfirmCommoditiesPurchase(itemID, qty)
+    Mock.purchases[#Mock.purchases + 1] = { kind = "confirm", itemID = itemID, qty = qty }
+    C_Timer.After(0.2, function() Mock.FireEvent("COMMODITY_PURCHASE_SUCCEEDED") end)
+end
+function AHX.CancelCommoditiesPurchase()
+    Mock.purchases[#Mock.purchases + 1] = { kind = "cancel" }
+end
+function AHX.PlaceBid(auctionID, amount)
+    Mock.purchases[#Mock.purchases + 1] = { kind = "bid", auctionID = auctionID, amount = amount }
+    C_Timer.After(0.2, function() Mock.FireEvent("AUCTION_HOUSE_PURCHASE_COMPLETED", auctionID) end)
+end
+function AHX.GetItemCommodityStatus(loc)
+    local s = Mock.bags[loc.bagID] and Mock.bags[loc.bagID][loc.slotIndex]
+    local it = s and Mock.items[s.itemID]
+    if not it then return 0 end
+    return (it.stack or 1) > 1 and 2 or 1
+end
+function AHX.CalculateItemDeposit(loc, duration, qty) return 100 * qty * duration end
+function AHX.CalculateCommodityDeposit(itemID, duration, qty) return 10 * qty * duration end
+local function post(kind, loc, duration, qty, price)
+    Mock.posts[#Mock.posts + 1] = { kind = kind, bag = loc.bagID, slot = loc.slotIndex, duration = duration, qty = qty, price = price }
+    return Mock.postNeedsConfirm == true
+end
+function AHX.PostItem(loc, duration, qty, bid, buyout) return post("item", loc, duration, qty, buyout) end
+function AHX.PostCommodity(loc, duration, qty, unitPrice) return post("commodity", loc, duration, qty, unitPrice) end
+function AHX.ConfirmPostCommodity(loc, duration, qty, unitPrice) Mock.postNeedsConfirm = false; return post("confirm", loc, duration, qty, unitPrice) end
+function AHX.ConfirmPostItem(loc, duration, qty, bid, buyout) Mock.postNeedsConfirm = false; return post("confirm", loc, duration, qty, buyout) end
+function AHX.SupportsCopperValues() return Mock.copperValues ~= false end
+function AHX.QueryOwnedAuctions() C_Timer.After(0.2, function() Mock.FireEvent("OWNED_AUCTIONS_UPDATED") end) end
+function AHX.GetNumOwnedAuctions() return #Mock.owned end
+function AHX.GetOwnedAuctionInfo(i)
+    local a = Mock.owned[i]
+    if not a then return nil end
+    return { auctionID = a[1], itemKey = { itemID = a[2] }, quantity = a[3], buyoutAmount = a[4], status = a[5] or 0, timeLeftSeconds = 3600 }
+end
+function AHX.CancelAuction(id) Mock.cancels[#Mock.cancels + 1] = id end
+function AHX.GetCancelCost() return 0 end
+
+-- Merchant --------------------------------------------------------------------------------------
+-- Mock.merchant = { {itemID, price, stack} }; selling uses a bag item while Mock.merchantOpen.
+Mock.merchant = {}
+MerchantFrame = newObject("Frame", "MerchantFrame")
+function GetMerchantItemID(i) return Mock.merchant[i] and Mock.merchant[i][1] end
+function GetMerchantItemInfo(i)
+    local m = Mock.merchant[i]
+    if not m then return nil end
+    return (Mock.items[m[1]] or {}).name, 134400, m[2], m[3] or 1
+end
+function BuyMerchantItem(i, qty) end
+function C_Container.UseContainerItem(bag, slot)
+    local s = Mock.bags[bag] and Mock.bags[bag][slot]
+    if not s then return end
+    if Mock.merchantOpen then
+        local it = Mock.items[s.itemID] or {}
+        Mock.money = (Mock.money or 0) + (it.sellPrice or 0) * (s.count or 1)
+        Mock.bags[bag][slot] = nil
+        Mock.sold = (Mock.sold or 0) + 1
+    end
+end
+
+-- Mail extras -------------------------------------------------------------------------------------
+Mock.returned = {}
+function ReturnInboxItem(i)
+    Mock.returned[#Mock.returned + 1] = Mock.inbox[i] and Mock.inbox[i].subject
+    table.remove(Mock.inbox, i)
+    C_Timer.After(0.1, function() Mock.FireEvent("MAIL_INBOX_UPDATE") end)
+end
+function AutoLootMailItem(i)
+    local m = Mock.inbox[i]
+    if not m then return end
+    if (m.cod or 0) > 0 then Mock.money = (Mock.money or 0) - m.cod end
+    Mock.money = (Mock.money or 0) + (m.money or 0)
+    table.remove(Mock.inbox, i)
+    C_Timer.After(0.1, function() Mock.FireEvent("MAIL_INBOX_UPDATE") end)
+end
+
+-- Trade -------------------------------------------------------------------------------------------
+-- Mock.trade = { player = { {itemID, count} }, target = { ... }, playerMoney, targetMoney, enchant }
+Mock.trade = { player = {}, target = {}, playerMoney = 0, targetMoney = 0 }
+TradeFrame = newObject("Frame", "TradeFrame")
+MAX_TRADABLE_ITEMS = 6
+TRADE_ENCHANT_SLOT = 7
+ERR_TRADE_COMPLETE = "Trade complete."
+local function tradeInfo(list, i)
+    local it = list[i]
+    if not it then return nil end
+    return (Mock.items[it[1]] or {}).name or "x", 134400, it[2] or 1, 1, true, nil
+end
+function GetTradePlayerItemInfo(i) return tradeInfo(Mock.trade.player, i) end
+function GetTradeTargetItemInfo(i)
+    if i == TRADE_ENCHANT_SLOT and Mock.trade.enchant then
+        return "Bracer", 134400, 1, 2, true, Mock.trade.enchant
+    end
+    return tradeInfo(Mock.trade.target, i)
+end
+function GetTradePlayerItemLink(i) local it = Mock.trade.player[i]; return it and ("|Hitem:" .. it[1] .. "|h[x]|h") end
+function GetTradeTargetItemLink(i) local it = Mock.trade.target[i]; return it and ("|Hitem:" .. it[1] .. "|h[x]|h") end
+function GetPlayerTradeMoney() return Mock.trade.playerMoney or 0 end
+function GetTargetTradeMoney() return Mock.trade.targetMoney or 0 end
+C_GuildInfo = { MemberExistsByName = function(name) return Mock.guild ~= nil and Mock.guild[name] == true end }
+
+-- Professions -------------------------------------------------------------------------------------
+-- Mock.recipes = { {recipeID, name, output, difficulty, reagents = { {itemID, qty} }, qtyMin, qtyMax} }
+Mock.recipes = {}
+Mock.crafts = {}
+ProfessionsFrame = newObject("Frame", "ProfessionsFrame")
+C_TradeSkillUI = {
+    GetAllRecipeIDs = function()
+        local ids = {}
+        for i, r in ipairs(Mock.recipes) do ids[i] = r.recipeID end
+        return ids
+    end,
+    GetRecipeInfo = function(id)
+        for _, r in ipairs(Mock.recipes) do
+            if r.recipeID == id then
+                return { recipeID = id, name = r.name, learned = true, relativeDifficulty = r.difficulty, numSkillUps = 1, craftable = true }
+            end
+        end
+    end,
+    GetRecipeSchematic = function(id)
+        for _, r in ipairs(Mock.recipes) do
+            if r.recipeID == id then
+                local slots = {}
+                for i, rg in ipairs(r.reagents) do
+                    slots[i] = { reagents = { { itemID = rg[1] } }, quantityRequired = rg[2], reagentType = 1 }
+                end
+                return { recipeID = id, outputItemID = r.output, quantityMin = r.qtyMin or 1, quantityMax = r.qtyMax or 1, reagentSlotSchematics = slots }
+            end
+        end
+    end,
+    GetBaseProfessionInfo = function() return { professionName = "Tailoring", skillLevel = Mock.skill or 60, maxSkillLevel = Mock.maxSkill or 75 } end,
+    CraftRecipe = function(id, n) Mock.crafts[#Mock.crafts + 1] = id end,
+}
+
+-- Client compression: reversible stand-in for raw DEFLATE.
+C_EncodingUtil = {
+    CompressString = function(s) return "~" .. s:reverse() end,
+    DecompressString = function(z) if z:sub(1, 1) == "~" then return z:sub(2):reverse() end end,
+}

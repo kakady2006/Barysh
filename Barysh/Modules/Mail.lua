@@ -207,6 +207,7 @@ function M.Collect()
 end
 
 local function onInboxUpdate()
+    ns.db.auctionMail = #M.ReadInbox().auction
     local c = M.collecting
     if c and c.waiting then
         c.waiting = nil

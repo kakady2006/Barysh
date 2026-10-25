@@ -83,6 +83,25 @@ function commands.save()
     ReloadUI()
 end
 
+function commands.settings()
+    ns.UI.ToggleSettings()
+end
+
+function commands.import()
+    ns.UI.ImportDialog()
+end
+
+-- /barysh export [list name] — without a name: all settings.
+function commands.export(arg)
+    if arg ~= "" then
+        local s = ns.ImportExport.ExportList(arg)
+        if not s then return say(L.UNKNOWN_LIST) end
+        ns.UI.ShowText(L.EXPORT_LIST_TITLE:format(ns.ItemLists.Title(arg)), s)
+    else
+        ns.UI.ShowText(L.EXPORT_SETTINGS_TITLE, ns.ImportExport.ExportSettings())
+    end
+end
+
 SLASH_BARYSH1 = "/barysh"
 SlashCmdList.BARYSH = function(input)
     local cmd, arg = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")

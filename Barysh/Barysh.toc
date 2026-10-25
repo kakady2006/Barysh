@@ -70,6 +70,10 @@ Core\Probe.lua
 UI\Widgets.lua
 UI\MainFrame.lua
 UI\Tabs.lua
+UI\TabTrade.lua
+UI\TabMoney.lua
+UI\Settings.lua
+UI\Panels.lua
 
 Core\Slash.lua
 Core\Boot.lua

@@ -325,7 +325,7 @@ def test_probe_records_environment(game):
     game.g.SlashCmdList.BARYSH("probe")
     p = to_py(game.g.BaryshDB.probe)
     assert p["env"]["interface"] == 16001
-    assert "C_AuctionHouse.PlaceBid" in p["env"]["missing"]
+    assert "C_AuctionHouse.SendSellSearchQuery" in p["env"]["missing"]
     assert len(p["replicateSample"]) == 5
     assert game.errors() == []
 
