@@ -18,6 +18,16 @@ Core\Jobs.lua
 Logic\Money.lua
 Logic\Stats.lua
 Logic\Pricing.lua
+Logic\Lots.lua
+Logic\ScanDiff.lua
+Logic\History.lua
+Logic\Velocity.lua
+Logic\DisenchantData.lua
+Logic\Disenchant.lua
+Logic\DisenchantPick.lua
+Logic\CostBasis.lua
+Logic\MailClassify.lua
+Logic\Ledger.lua
 
 Data\Market.lua
 

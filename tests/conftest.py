@@ -63,6 +63,28 @@ class Addon:
     def table(self, *args, **kwargs):
         return self.lua.table(*args, **kwargs)
 
+    def to_lua(self, obj):
+        """Python dicts/lists -> Lua tables, recursively."""
+        if isinstance(obj, dict):
+            return self.lua.table_from({k: self.to_lua(v) for k, v in obj.items()})
+        if isinstance(obj, (list, tuple)):
+            return self.lua.table_from([self.to_lua(v) for v in obj])
+        return obj
+
+    def lots(self, *triples):
+        """(qty, price, tl) -> Lua lot list."""
+        return self.to_lua([{"qty": q, "price": p, "tl": t} for q, p, t in triples])
+
+
+def to_py(value):
+    """Lua tables -> Python: sequences become lists, the rest dicts."""
+    if lua51.lua_type(value) != "table":
+        return value
+    keys = list(value.keys())
+    if keys == list(range(1, len(keys) + 1)):
+        return [to_py(value[k]) for k in keys]
+    return {k: to_py(value[k]) for k in keys}
+
 
 @pytest.fixture
 def addon():
