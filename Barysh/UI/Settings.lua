@@ -218,6 +218,27 @@ function build.craft(l)
     l:Module("Trade")
     l:Check(L.SET_TRADE_ASK, { "trade", "ask" }, nil, moduleOn("Trade"))
     l:Button(L.BTN_PRICE_LIST, function() UI.EditPriceList() end, L.TIP_PRICE_LIST)
+    l:Header(L.CLIENTS_TITLE)
+    local clients = UI.Lines((function()
+        local f = CreateFrame("Frame", nil, l.parent)
+        l:Add(f, 10 * 16 + 4, 8)
+        f:SetSize(440, 10 * 16)
+        return f
+    end)(), 10, 440)
+    l.items[#l.items + 1] = { Update = function()
+        local list = {}
+        for name, c in pairs(ns.db.clients) do list[#list + 1] = { name = name, c = c } end
+        table.sort(list, function(a, b) return (a.c.last or 0) > (b.c.last or 0) end)
+        local texts = {}
+        for i, e in ipairs(list) do
+            if i > #clients then break end
+            local regular = ns.TradeLogic.IsRegular(ns.db.clients, e.name) and (" · " .. L.TRADE_REGULAR) or ""
+            texts[i] = L.CLIENT_LINE:format(e.name, e.c.orders, ns.FormatMoney(e.c.sum),
+                e.c.last and date("%d.%m", e.c.last) or "—") .. regular
+        end
+        if #texts == 0 then texts[1] = UI.Colorize(L.CLIENTS_NONE, "muted") end
+        UI.SetLines(clients, texts)
+    end }
 end
 
 function build.money(l)

@@ -75,8 +75,8 @@ function M.AddLines(tooltip, itemID, link)
     if s.min7 then
         tooltip:AddDoubleLine(L.TT_MIN_MEDIAN, money(s.min7) .. " · " .. money(s.median7), 1, 0.82, 0, 1, 1, 1)
     end
-    if not AH.IsNeutralKey(key) then
-        local neutralKey = (GetRealmName() or "?") .. "|Neutral"
+    if ns.IsModuleEnabled("Neutral") and not AH.IsNeutralKey(key) then
+        local neutralKey = AH.NeutralKey()
         local n = ns.db.ah[neutralKey] and ns.Prices.Item(itemID, neutralKey)
         if n and (n.market or n.current) then
             tooltip:AddDoubleLine(L.TT_AH_NEUTRAL, money(n.market or n.current), 1, 0.82, 0, 1, 1, 1)

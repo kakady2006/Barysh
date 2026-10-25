@@ -6,4 +6,5 @@ ns.market = {
     generated = 0, -- unix time the file was written; 0 = never
     ack = {},      -- what BaryshSync has stored: scans = time, ledger = id, errors = time
     ah = {},       -- ["Realm|Horde"] = { [itemID] = { market price, sold per day, scans } }
+    series = {},   -- ["Realm|Horde"] = { [itemID] = { "daily prices, 30 days", "daily sales" } }
 }

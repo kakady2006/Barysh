@@ -457,4 +457,7 @@ ns.RegisterLocale("enUS", {
     LIST_ADD_HINT = "link, ID or name, Enter; or drag an item",
     SRC_manual = "manual",
     SRC_import = "import",
+    CLIENTS_TITLE = "Clients",
+    CLIENTS_NONE = "No orders yet.",
+    CLIENT_LINE = "%s: orders %d, total %s, last %s",
 })

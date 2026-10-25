@@ -17,10 +17,16 @@ def setup_logging(cfg, quiet=False):
 
 
 def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] in ("encode", "decode"):
+        # Import strings for lists: python -m barysh_sync encode list.json | decode "!BARYSH:..."
+        from . import importstring
+        return importstring.main(argv)
     parser = argparse.ArgumentParser(prog="barysh-sync", description=f"BaryshSync {__version__}")
     parser.add_argument("--once", action="store_true", help="process changed files once and exit")
     parser.add_argument("--config", help="path to config.toml")
     parser.add_argument("--quiet", action="store_true", help="log only to the file (for pythonw)")
+    parser.add_argument("--tray", action="store_true", help="show a tray icon (Windows)")
     args = parser.parse_args(argv)
 
     cfg = config.load(args.config)
@@ -32,6 +38,10 @@ def main(argv=None):
             return 1
     if args.once:
         app.poll_once()
+        return 0
+    if args.tray and sys.platform == "win32":
+        from . import tray
+        tray.run(app)
         return 0
     app.run_forever()
     return 0

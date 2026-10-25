@@ -468,4 +468,7 @@ ns.RegisterLocale("ruRU", {
     LIST_ADD_HINT = "ссылка, ID или название, Enter; можно перетащить",
     SRC_manual = "вручную",
     SRC_import = "импорт",
+    CLIENTS_TITLE = "Клиенты",
+    CLIENTS_NONE = "Заказов пока не было.",
+    CLIENT_LINE = "%s: заказов %d, сумма %s, последний %s",
 })

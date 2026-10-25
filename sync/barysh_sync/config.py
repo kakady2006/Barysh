@@ -21,6 +21,8 @@ class Config:
     repo_dir: Path = REPO_DIR
     github_issues: bool = True
     poll_seconds: float = 2.0
+    google_key_file: Path | None = None
+    spreadsheet_id: str | None = None
 
     @property
     def database(self):
@@ -38,6 +40,14 @@ class Config:
     def status_file(self):
         return self.data_dir / "status.json"
 
+    @property
+    def exports(self):
+        return self.data_dir / "exports"
+
+    @property
+    def sheets_enabled(self):
+        return bool(self.google_key_file and self.spreadsheet_id)
+
 
 def load(path=None):
     path = Path(path) if path else SYNC_DIR / "config.toml"
@@ -53,4 +63,8 @@ def load(path=None):
             cfg.github_issues = bool(raw["github_issues"])
         if raw.get("poll_seconds"):
             cfg.poll_seconds = float(raw["poll_seconds"])
+        if raw.get("google_key_file"):
+            cfg.google_key_file = Path(raw["google_key_file"])
+        if raw.get("spreadsheet_id"):
+            cfg.spreadsheet_id = str(raw["spreadsheet_id"])
     return cfg

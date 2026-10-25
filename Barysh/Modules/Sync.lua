@@ -36,6 +36,13 @@ function M.ApplyAck()
     if ack.ledger then
         Ledger.Trim(ns.db.ledger, ack.ledger, ns.Now() - LEDGER_KEEP_DAYS * 86400)
     end
+    if ack.exports then
+        local kept = {}
+        for _, r in ipairs(ns.db.exportRequests) do
+            if r.t > ack.exports then kept[#kept + 1] = r end
+        end
+        ns.db.exportRequests = kept
+    end
     if ack.errors then
         local kept = {}
         for _, e in ipairs(ns.db.errors) do

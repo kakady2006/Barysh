@@ -65,6 +65,19 @@ CREATE TABLE IF NOT EXISTS errors (
     reported_count INTEGER DEFAULT 0,
     issue INTEGER
 );
+-- Capital per day (as the addon's overview counts it). Rows of the "Капитал по дням" sheet.
+CREATE TABLE IF NOT EXISTS capital (
+    day TEXT PRIMARY KEY,
+    t INTEGER,
+    gold INTEGER, bags INTEGER, bank INTEGER, mail INTEGER, auctions INTEGER, total INTEGER
+);
+-- Trade clients. Names stay on this PC: never sent to GitHub or Google.
+CREATE TABLE IF NOT EXISTS clients (
+    name TEXT PRIMARY KEY,
+    orders INTEGER,
+    sum INTEGER,
+    last INTEGER
+);
 CREATE TABLE IF NOT EXISTS probe (
     t INTEGER PRIMARY KEY,
     data TEXT
@@ -79,8 +92,12 @@ VERDICTS = {"s": "sold", "u": "unknown", "e": "expired"}
 
 
 def connect(path):
-    con = sqlite3.connect(path)
+    # The tray runs the sync loop in a worker thread; only that thread uses the connection then.
+    con = sqlite3.connect(path, check_same_thread=False)
     con.executescript(SCHEMA)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(chars)")}
+    if "inv" not in cols:  # databases created before holdings were synced
+        con.execute("ALTER TABLE chars ADD COLUMN inv TEXT")
     return con
 
 
@@ -137,13 +154,34 @@ def import_ledger(con, ops):
     return max((r[0] for r in rows), default=None)
 
 
+INVENTORY = ("bags", "bank", "mail", "auctions", "mailMoney")
+
+
 def import_chars(con, chars):
     for name, c in (chars or {}).items():
+        inv = json.dumps({k: c.get(k) for k in INVENTORY if c.get(k) is not None}, default=str)
         con.execute(
-            "INSERT INTO chars VALUES (?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET "
-            "money = excluded.money, t = excluded.t, faction = excluded.faction WHERE excluded.t >= chars.t",
-            (name, c.get("money"), c.get("t"), c.get("faction")),
+            "INSERT INTO chars (name, money, t, faction, inv) VALUES (?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET "
+            "money = excluded.money, t = excluded.t, faction = excluded.faction, inv = excluded.inv "
+            "WHERE excluded.t >= chars.t",
+            (name, c.get("money"), c.get("t"), c.get("faction"), inv),
         )
+
+
+def import_clients(con, clients):
+    for name, c in (clients or {}).items():
+        con.execute(
+            "INSERT OR REPLACE INTO clients VALUES (?, ?, ?, ?)",
+            (name, c.get("orders"), c.get("sum"), c.get("last")),
+        )
+
+
+def save_capital(con, day, t, c):
+    con.execute(
+        "INSERT OR REPLACE INTO capital VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (day, t, c["gold"], c["bags"], c["bank"], c["mail"], c["auctions"], c["total"]),
+    )
+    con.commit()
 
 
 def import_errors(con, errors, key_hash):
@@ -184,6 +222,10 @@ def import_saved_variables(con, data, key_hash):
     if last_id is not None:
         ack["ledger"] = last_id
     import_chars(con, data.get("chars"))
+    import_clients(con, data.get("clients"))
+    requests = as_list(data.get("exportRequests"))
+    if requests:
+        ack["exports"] = max(int(r.get("t") or 0) for r in requests)
     last_err = import_errors(con, as_list(data.get("errors")), key_hash)
     if last_err is not None:
         ack["errors"] = last_err

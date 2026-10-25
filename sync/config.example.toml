@@ -12,3 +12,11 @@
 
 # How often to check the SavedVariables file, seconds.
 # poll_seconds = 2
+
+# Google Sheet with the ledger (sheets: Операции, Капитал по дням, Склад, Доход по занятиям).
+# 1. Google Cloud console: create a project, enable "Google Sheets API",
+#    create a service account and download its JSON key (keep it outside the repository).
+# 2. Create a spreadsheet and share it with the service account's e-mail (editor).
+# 3. Put the key path and the spreadsheet ID (from its URL: /d/<ID>/edit) here.
+# google_key_file = 'C:\Users\<you>\Documents\barysh-sheets-key.json'
+# spreadsheet_id = '1AbC...'
