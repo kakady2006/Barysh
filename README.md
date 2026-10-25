@@ -23,10 +23,18 @@ python -m barysh_sync            # работает в фоне, следит з
 python -m barysh_sync --once     # обработать один раз и выйти
 powershell -ExecutionPolicy Bypass -File ..\tools\register-sync-task.ps1   # автозапуск при входе в Windows
 ```
-Настройки — `sync/config.toml` (пример: `sync/config.example.toml`). Данные — в `%LOCALAPPDATA%\BaryshSync`.
+Настройки — `sync/config.toml` (пример: `sync/config.example.toml`, там же — как подключить Google Таблицу). Данные, резервные копии и файлы «Экспорт для анализа» — в `%LOCALAPPDATA%\BaryshSync`. При автозапуске BaryshSync показывает значок в трее с временем последней синхронизации.
+
+Строки импорта списков можно готовить вне игры:
+```powershell
+python -m barysh_sync encode list.json      # {"list": "stock", "items": {"2589": {"buyBelow": 900, "note": "..."}}}
+python -m barysh_sync decode "!BARYSH:1!..."
+```
 
 ## Команды в игре
-`/barysh` — окно, `scan` — полный скан, `quick` — быстрый, `probe` — отчёт о клиенте, `save` — сохранить (`/reload`), `de` — показать/скрыть распылитель, `modules`, `module <Имя> on|off`.
+`/barysh` — окно, `settings` — настройки, `scan` — полный скан, `quick` — быстрый, `import`, `export [список]`, `probe` — отчёт о клиенте, `save` — сохранить (`/reload`), `de` — показать/скрыть распылитель, `modules`, `module <Имя> on|off`.
+
+Вкладки: Обзор, Сделки, Продажи, Склад, Рынок, Учёт, Почта. Панели у окон игры: почта, профессия (выгода рецептов), обмен; кнопка «Продать торговцу» у торговца.
 
 ## Тесты
 ```powershell
