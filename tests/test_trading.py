@@ -70,7 +70,11 @@ def test_commodity_resale_deal_and_purchase(game):
 
     run(game, f"WowMock.commodityQuote = {row['cost']}")
     lua_row = next(r for r in game.ns.DealsModule.rows.values() if r.itemID == LINEN)
-    assert game.ns.DealsModule.Buy(lua_row)
+    D = game.ns.DealsModule
+    assert D.Buy(lua_row)            # first click: the game quotes the price
+    game.mock.Advance(1)
+    assert D.ButtonState(lua_row) == "confirm"
+    assert D.BuyNext()               # second click confirms
     game.mock.Advance(1)
     kinds = [p["kind"] for p in to_py(game.mock.purchases)]
     assert kinds == ["start", "confirm"]

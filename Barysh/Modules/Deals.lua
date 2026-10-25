@@ -5,9 +5,10 @@ local Deals, Lots, Items, AH, Jobs, MarketStats, Disenchant =
 local L = ns.L
 
 -- Profitable purchases list and buying. TZ: "Сделки", docs/decisions.md items 1-2.
--- Buying: one click = one purchase. Commodities: the click starts the purchase, the addon confirms
--- only if the quoted total is not above the row's cost. Items: the lot is found by an item search
--- beforehand (no click needed), the click places the buyout.
+-- Commodities: the first click asks the price (StartCommoditiesPurchase), the second click confirms
+-- if the quote is not above the row's cost; a higher quote is cancelled.
+-- VERIFY: if ConfirmCommoditiesPurchase works without a click on Forever, confirm right away.
+-- Items: the lot is found by an item search beforehand (no click needed), the click places the buyout.
 local M = ns:NewModule("Deals", { group = "trade" })
 ns.DealsModule = M
 
@@ -51,7 +52,7 @@ function M.ItemData(key, itemID, lots, ctx)
     if s.isNew then market = Deals.NewItemReference(lots) or market end
     local it = {
         itemID = itemID, lots = lots, market = market, perDay = s.perDay,
-        commodity = Items.IsCommodity(itemID),
+        commodity = Items.IsCommodity(itemID, lots),
         vendor = info and info.sellPrice or 0,
         deposit = AH.DepositEstimate(info and info.sellPrice, key),
     }
@@ -169,7 +170,8 @@ end
 
 -- Buying ------------------------------------------------------------------------------------
 
-M.buying = nil   -- { row, stage = "quote" | "confirming" | "bidding" }
+M.buying = nil   -- { row, stage = "quote" | "confirm" | "confirming" | "bidding" }
+M.CONFIRM_WAIT = 20 -- seconds the quoted price waits for the confirming click
 
 local function finishPurchase(row)
     row.bought = true
@@ -248,7 +250,10 @@ end
 -- What the buy button would do for a row: "buy" | "search" | "busy" | "gone".
 function M.ButtonState(row)
     if not row or not ns.Scan.ahOpen then return "closed" end
-    if M.buying then return "busy" end
+    if M.buying then
+        if M.buying.row == row and M.buying.stage == "confirm" then return "confirm" end
+        return "busy"
+    end
     if row.commodity or row.auctionID then return "buy" end
     if row.searched then return "gone" end
     return "search"
@@ -256,8 +261,14 @@ end
 
 -- Must be called from a click.
 function M.Buy(row)
-    if not row or row.bought or M.buying then return false end
-    if not ns.Scan.ahOpen then return false end
+    if not row or row.bought or not ns.Scan.ahOpen then return false end
+    local b = M.buying
+    if b and b.row == row and b.stage == "confirm" then
+        b.stage = "confirming"
+        AH.ConfirmCommodityPurchase(row.itemID, row.qty)
+        return true
+    end
+    if b then return false end
     if row.commodity then
         M.buying = { row = row, stage = "quote", t = GetTime() }
         AH.StartCommodityPurchase(row.itemID, row.qty)
@@ -282,6 +293,7 @@ function M.Buy(row)
 end
 
 function M.BuyNext()
+    if M.buying and M.buying.stage == "confirm" then return M.Buy(M.buying.row) end
     local rows = M.Rows(nil, ns.settings.deals.affordable)
     return M.Buy(rows[1])
 end
@@ -295,9 +307,16 @@ local function onPriceUpdated(_, _, unitPrice, totalPrice)
         failPurchase("price")
         return
     end
-    b.stage = "confirming"
+    b.stage = "confirm"
     row.cost = totalPrice
-    AH.ConfirmCommodityPurchase(row.itemID, row.qty)
+    if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+    C_Timer.After(M.CONFIRM_WAIT, function()
+        if M.buying == b and b.stage == "confirm" then
+            AH.CancelCommodityPurchase()
+            M.buying = nil
+            if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+        end
+    end)
 end
 
 ns.Scan.OnApplied(function(stats)

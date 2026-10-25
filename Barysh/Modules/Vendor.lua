@@ -18,7 +18,9 @@ function M.Reason(itemID, info)
     if s.junk and info.quality == 0 then return "junk" end
     local bought = ns.db.purchases[itemID]
     if s.easy and bought and bought.type == "easy" then return "easy" end
-    if s.better and ns.BestUse(itemID) == "vendor" and info.quality and info.quality >= 1 then
+    -- Weapons and armour are never sold as "better to vendor": it may be gear the player keeps.
+    local gear = info.classID == 2 or info.classID == 4
+    if s.better and not gear and ns.BestUse(itemID) == "vendor" and info.quality and info.quality >= 1 then
         -- Only with a market price known: without one "vendor" is just the only option.
         if ns.Prices.Value(itemID) then return "better" end
     end

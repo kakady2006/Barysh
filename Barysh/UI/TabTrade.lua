@@ -44,18 +44,19 @@ UI.RegisterTab({
         c.header:SetPoint("TOPLEFT", 26, -50)
         c.header:SetText(L.DEALS_HEADER)
         c.list = UI.ScrollList(c, {
-            { width = 168 }, { width = 62 }, { width = 66, justify = "RIGHT" }, { width = 66, justify = "RIGHT" },
-            { width = 66, justify = "RIGHT" }, { width = 50, justify = "RIGHT" },
+            { width = 156 }, { width = 58 }, { width = 64, justify = "RIGHT" }, { width = 64, justify = "RIGHT" },
+            { width = 64, justify = "RIGHT" }, { width = 50, justify = "RIGHT" },
         }, 14, {
             button = {
                 width = 62,
                 text = function(d)
                     local st = ns.DealsModule.ButtonState(d)
+                    if st == "confirm" then return L.BTN_CONFIRM end
                     return st == "search" and L.BTN_FIND or (st == "gone" and L.BTN_GONE or L.BTN_BUY)
                 end,
                 enabled = function(d)
                     local st = ns.DealsModule.ButtonState(d)
-                    return st == "buy" or st == "search"
+                    return st == "buy" or st == "search" or st == "confirm"
                 end,
                 onClick = function(d) ns.DealsModule.Buy(d) end,
             },
@@ -110,7 +111,9 @@ UI.RegisterTab({
         else
             c.total:SetText(L.DEALS_TOTAL:format(sum.n, money(sum.cost), profitText(sum.profit)))
         end
-        c.buyNext:SetEnabled(ns.Scan.ahOpen and #data > 0 and not D.buying)
+        local confirming = D.buying and D.buying.stage == "confirm"
+        c.buyNext:SetText(confirming and L.BTN_CONFIRM_BUY:format(money(D.buying.row.cost)) or L.BTN_BUY_NEXT)
+        c.buyNext:SetEnabled(ns.Scan.ahOpen and ((#data > 0 and not D.buying) or confirming))
     end,
 })
 

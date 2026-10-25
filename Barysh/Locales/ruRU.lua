@@ -471,4 +471,6 @@ ns.RegisterLocale("ruRU", {
     CLIENTS_TITLE = "Клиенты",
     CLIENTS_NONE = "Заказов пока не было.",
     CLIENT_LINE = "%s: заказов %d, сумма %s, последний %s",
+    BTN_CONFIRM = "Да, купить",
+    BTN_CONFIRM_BUY = "Подтвердить: %s",
 })

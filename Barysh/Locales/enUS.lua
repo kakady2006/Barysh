@@ -460,4 +460,6 @@ ns.RegisterLocale("enUS", {
     CLIENTS_TITLE = "Clients",
     CLIENTS_NONE = "No orders yet.",
     CLIENT_LINE = "%s: orders %d, total %s, last %s",
+    BTN_CONFIRM = "Yes, buy",
+    BTN_CONFIRM_BUY = "Confirm: %s",
 })

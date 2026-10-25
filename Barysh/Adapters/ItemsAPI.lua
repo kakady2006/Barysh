@@ -45,11 +45,16 @@ end
 
 -- VERIFY: whether an item is a commodity (bought by quantity). The auction house decides this per
 -- item; until the client tells (search event type), stackable items are treated as commodities.
-function Items.IsCommodity(itemID)
+-- lots (optional): while the client has not loaded the item, a lot of more than one unit means a stack.
+function Items.IsCommodity(itemID, lots)
     local known = ns.db and ns.db.commodity and ns.db.commodity[itemID]
     if known ~= nil then return known end
     local info = Items.Info(itemID)
-    return info ~= nil and (info.stack or 1) > 1
+    if info then return (info.stack or 1) > 1 end
+    for _, l in ipairs(lots or {}) do
+        if l.qty > 1 then return true end
+    end
+    return false
 end
 
 -- Remembers what the client said about an item (search results come as commodity or item events).
