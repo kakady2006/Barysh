@@ -55,6 +55,27 @@ function commands.quick()
     if not ok then say(L["SCAN_FAIL_" .. why] or why) end
 end
 
+-- /barysh quickadd <shift-click an item | item ID | name>
+function commands.quickadd(arg)
+    local id = ns.Items.ID(tonumber(arg) or arg)
+    if not id then return say(L.ITEM_NOT_FOUND) end
+    local list = ns.settings.lists.quick
+    for _, v in ipairs(list) do
+        if v == id then return say(L.QUICK_LIST:format(#list)) end
+    end
+    list[#list + 1] = id
+    say(L.QUICK_LIST:format(#list))
+end
+
+function commands.quickdel(arg)
+    local id = ns.Items.ID(tonumber(arg) or arg)
+    local list = ns.settings.lists.quick
+    for i = #list, 1, -1 do
+        if list[i] == id then table.remove(list, i) end
+    end
+    say(L.QUICK_LIST:format(#list))
+end
+
 function commands.probe()
     ns.Probe.Run()
 end

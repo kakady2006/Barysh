@@ -1,11 +1,14 @@
-# Copy to sync/config.toml (not tracked by git) and adjust if auto-detection fails.
+# Copy to sync/config.toml (not tracked by git). Every line is optional.
 
-# Folder of the Forever flavor, e.g. C:\Program Files (x86)\World of Warcraft\_<flavor>_
-# game_dir = ''
+# Folder of the Forever game flavor. Found automatically under
+# C:\Program Files (x86)\World of Warcraft\_*_ when the Barysh addon is installed there.
+# game_dir = 'C:\Program Files (x86)\World of Warcraft\_forever_'
 
-# SQLite database
-# database = 'C:\Users\<you>\BaryshData\barysh.sqlite'
+# Database, backups, log and status. Default: %LOCALAPPDATA%\BaryshSync
+# data_dir = 'D:\BaryshData'
 
-# Google Sheets (service account key file and spreadsheet id)
-# google_credentials = ''
-# spreadsheet_id = ''
+# Send addon errors to GitHub issues of this repository (needs `gh auth login`).
+# github_issues = true
+
+# How often to check the SavedVariables file, seconds.
+# poll_seconds = 2

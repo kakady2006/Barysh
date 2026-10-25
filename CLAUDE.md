@@ -22,11 +22,19 @@ Barysh/            аддон (папка ставится junction-ссылко
   Logic/           ЧИСТЫЙ Lua 5.1: ни одного вызова API игры. Все расчёты — здесь и только с тестами
   Adapters/        тонкий слой над API игры (C_AuctionHouse, почта, сумки, обмен). Всё, что может сломаться на клиенте
   Modules/         функции из ТЗ; каждый модуль регистрируется через ns:NewModule и включается галочкой
+  UI/              главное окно (вкладки регистрируются через ns.UI.RegisterTab), виджеты, кнопка у миникарты
   Data/            Market.lua пишет BaryshSync (в .gitignore); Market.default.lua — заглушка
-sync/              BaryshSync, Python 3.13
+sync/barysh_sync/  BaryshSync, Python 3.13 без внешних зависимостей:
+                   luadata (разбор SavedVariables), db (SQLite), pricing/stats (та же формула, что в аддоне),
+                   market_file, errors (GitHub Issues через gh), backup, app (цикл слежения)
 tests/             pytest + lupa (Lua 5.1 внутри Python); tests/wow_mock.lua — имитация API игры
-docs/              решения, чек-лист проверки в игре
+sync/tests/        тесты BaryshSync, включая сквозной: аддон → SavedVariables → BaryshSync → Market.lua → аддон
+docs/              решения (decisions.md), чек-лист проверки в игре
+tools/             install.ps1 (подключить аддон), register-sync-task.ps1 (автозапуск BaryshSync)
 ```
+- `ns.Prices.Item(itemID)` — единственный источник цен для модулей (локальная история + данные с ПК).
+- `/barysh probe` пишет в `BaryshDB.probe` факты о клиенте; BaryshSync сохраняет их в таблицу `probe`. Первым делом после запуска игры — смотреть туда.
+- Формула рыночной цены живёт в двух местах (`Logic/Pricing.lua` и `sync/barysh_sync/pricing.py`); тест `test_market_price_matches_addon` следит, чтобы они совпадали.
 - Каждый файл аддона начинается с `local _, ns = ...`. Глобальных переменных нет, кроме `BaryshDB`, `BaryshCharDB` и слеш-команд.
 - Модуль: `local M = ns:NewModule("Name", { group = "trade", canDisable = true, defaultEnabled = true })`, затем `M:OnEnable()` / `M:OnDisable()`. Подписка на события — только `M:RegisterEvent(...)` внутри `OnEnable`. Выключенный модуль не держит данных и подписок.
 - Обработчики событий и колбэки — через `ns.Safe`: ошибки попадают в `BaryshDB.errors`, их забирает BaryshSync.

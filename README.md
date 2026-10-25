@@ -16,6 +16,18 @@ powershell -ExecutionPolicy Bypass -File tools\install.ps1 -AddOnsDir "C:\Progra
 ```
 Скрипт делает ссылку на папку `Barysh` и создаёт `Barysh/Data/Market.lua` из заглушки.
 
+## BaryshSync
+```powershell
+cd sync
+python -m barysh_sync            # работает в фоне, следит за сохранениями
+python -m barysh_sync --once     # обработать один раз и выйти
+powershell -ExecutionPolicy Bypass -File ..\tools\register-sync-task.ps1   # автозапуск при входе в Windows
+```
+Настройки — `sync/config.toml` (пример: `sync/config.example.toml`). Данные — в `%LOCALAPPDATA%\BaryshSync`.
+
+## Команды в игре
+`/barysh` — окно, `scan` — полный скан, `quick` — быстрый, `probe` — отчёт о клиенте, `save` — сохранить (`/reload`), `de` — показать/скрыть распылитель, `modules`, `module <Имя> on|off`.
+
 ## Тесты
 ```powershell
 python -m pip install -r requirements-dev.txt

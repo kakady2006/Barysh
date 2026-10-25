@@ -1,19 +1,39 @@
-"""Entry point. For now it only reports what it finds; the watcher comes in stage 1."""
+"""Entry point: python -m barysh_sync [--once] [--config path]."""
 
-from . import __version__
-from .paths import find_game_dirs, saved_variables_files
+import argparse
+import logging
+import sys
+
+from . import __version__, config
+from .app import App
 
 
-def main():
-    print(f"BaryshSync {__version__}")
-    dirs = find_game_dirs()
-    if not dirs:
-        print("WoW folder with the Barysh addon not found (set game_dir in sync/config.toml).")
-        return 1
-    for game_dir in dirs:
-        print(f"Game folder: {game_dir}")
-        for sv in saved_variables_files(game_dir):
-            print(f"  SavedVariables: {sv}")
+def setup_logging(cfg, quiet=False):
+    cfg.data_dir.mkdir(parents=True, exist_ok=True)
+    handlers = [logging.FileHandler(cfg.log_file, encoding="utf-8")]
+    if not quiet and sys.stdout is not None:
+        handlers.append(logging.StreamHandler(sys.stdout))
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", handlers=handlers)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="barysh-sync", description=f"BaryshSync {__version__}")
+    parser.add_argument("--once", action="store_true", help="process changed files once and exit")
+    parser.add_argument("--config", help="path to config.toml")
+    parser.add_argument("--quiet", action="store_true", help="log only to the file (for pythonw)")
+    args = parser.parse_args(argv)
+
+    cfg = config.load(args.config)
+    setup_logging(cfg, args.quiet)
+    app = App(cfg)
+    if not app.game_dirs():
+        logging.error("Папка WoW с аддоном Barysh не найдена. Укажи game_dir в sync/config.toml.")
+        if args.once:
+            return 1
+    if args.once:
+        app.poll_once()
+        return 0
+    app.run_forever()
     return 0
 
 

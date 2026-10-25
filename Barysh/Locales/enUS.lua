@@ -2,7 +2,9 @@ local _, ns = ...
 
 ns.RegisterLocale("enUS", {
     LOADED = "Barysh %s loaded. Window: /barysh or the minimap button.",
-    HELP = "Commands: /barysh (window), scan, quick, probe, save, de, modules, module <Name> on|off, errors, profile account|char",
+    HELP = "Commands: /barysh (window), scan, quick, quickadd <item>, quickdel <item>, probe, save, de, modules, module <Name> on|off, errors, profile account|char",
+    ITEM_NOT_FOUND = "Item not found: paste a link (Shift+click), an ID or the exact name.",
+    QUICK_LIST = "Quick scan list: %d items.",
     MODULES = "Modules:",
     ON = "on",
     OFF = "off",

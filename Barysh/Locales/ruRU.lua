@@ -2,7 +2,9 @@ local _, ns = ...
 
 ns.RegisterLocale("ruRU", {
     LOADED = "Barysh %s загружен. Окно: /barysh или кнопка у миникарты.",
-    HELP = "Команды: /barysh (окно), scan, quick, probe, save, de, modules, module <Имя> on|off, errors, profile account|char",
+    HELP = "Команды: /barysh (окно), scan, quick, quickadd <предмет>, quickdel <предмет>, probe, save, de, modules, module <Имя> on|off, errors, profile account|char",
+    ITEM_NOT_FOUND = "Предмет не найден: вставь ссылку (Shift+клик), ID или точное название.",
+    QUICK_LIST = "В списке «Быстрый скан»: %d.",
     MODULES = "Модули:",
     ON = "вкл.",
     OFF = "выкл.",

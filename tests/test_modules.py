@@ -329,6 +329,19 @@ def test_probe_records_environment(game):
     assert game.errors() == []
 
 
+def test_quick_list_commands(game):
+    slash = game.g.SlashCmdList.BARYSH
+    slash(f"quickadd {LINEN}")
+    slash("quickadd |cffffffff|Hitem:5000::::::::|h[Gloves]|h|r")
+    slash("quickadd Strange Dust")
+    slash(f"quickadd {LINEN}")
+    assert to_py(game.ns.settings.lists.quick) == [LINEN, GLOVES, DUST]
+    slash("quickdel Gloves")
+    assert to_py(game.ns.settings.lists.quick) == [LINEN, DUST]
+    slash("quickadd No Such Thing")
+    assert "Предмет не найден" in game.mock.printed[len(game.mock.printed)]
+
+
 def test_slash_commands_do_not_error(game):
     for cmd in ("modules", "module Deals off", "module Deals on", "errors", "scan", "quick", "de", "de show", "nonsense"):
         game.g.SlashCmdList.BARYSH(cmd)

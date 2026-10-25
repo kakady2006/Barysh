@@ -30,7 +30,8 @@ def source_for(rel):
 
 
 class Addon:
-    def __init__(self, files):
+    def __init__(self, files, overrides=None):
+        """overrides: {relative path: source} to replace a file (e.g. a generated Data/Market.lua)."""
         self.lua = lua51.LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute(MOCK.read_text(encoding="utf-8"))
         self.ns = self.lua.table()
@@ -41,8 +42,9 @@ class Addon:
             "if not f then error(err, 0) end "
             "return f(addon, ns) end"
         )
+        overrides = overrides or {}
         for rel in files:
-            loader(source_for(rel), rel, ADDON_NAME, self.ns)
+            loader(overrides.get(rel) or source_for(rel), rel, ADDON_NAME, self.ns)
         self.mock = self.lua.globals().WowMock
         self.g = self.lua.globals()
 
@@ -74,6 +76,37 @@ class Addon:
     def lots(self, *triples):
         """(qty, price, tl) -> Lua lot list."""
         return self.to_lua([{"qty": q, "price": p, "tl": t} for q, p, t in triples])
+
+
+def saved_variables(value, name):
+    """Writes a Lua value the way the WoW client writes SavedVariables files (UTF-8 bytes)."""
+    out = [f"\n{name} = "]
+
+    def emit(v, depth):
+        t = lua51.lua_type(v)
+        if t == "table":
+            out.append("{\n")
+            keys = list(v.keys())
+            seq = keys == list(range(1, len(keys) + 1))
+            for k in keys:
+                out.append("\t" * (depth + 1))
+                if not seq:
+                    out.append(f'["{k}"] = ' if isinstance(k, str) else f"[{k}] = ")
+                emit(v[k], depth + 1)
+                out.append(f", -- [{k}]\n" if seq else ",\n")
+            out.append("\t" * depth + "}")
+        elif isinstance(v, bool):
+            out.append("true" if v else "false")
+        elif isinstance(v, str):
+            out.append('"' + v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"')
+        elif v is None:
+            out.append("nil")
+        else:
+            out.append(repr(v))
+
+    emit(value, 0)
+    out.append("\n")
+    return "".join(out).encode("utf-8")
 
 
 def to_py(value):
