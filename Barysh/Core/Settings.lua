@@ -24,8 +24,30 @@ ns.defaults = {
     staleHours = 24,
     disenchant = {
         quality = "green", -- green | greenblue
+        skipBetterToSell = true,
+        key = "F",
+        shown = true,
     },
+    tooltip = {
+        enabled = true,
+    },
+    lists = {
+        quick = {},    -- itemIDs for the quick scan
+        noBuy = {},    -- [itemID] = true
+        noDisenchant = {}, -- [itemID] = true
+    },
+    minimap = { angle = 200, hidden = false },
 }
+
+-- Account-wide data, not part of a profile.
+local function initData(db)
+    db.ah = db.ah or {}           -- per auction house: scans, snapshot, history, sales
+    db.books = db.books or {}     -- cost basis per item
+    db.ledger = db.ledger or { nextId = 1, ops = {} }
+    db.chars = db.chars or {}     -- money and last login per character
+    db.probe = db.probe or {}     -- facts about the client for docs/ingame-checklist.md
+    db.errors = db.errors or {}
+end
 
 local function copyDefaults(src, dst)
     for k, v in pairs(src) do
@@ -46,6 +68,7 @@ function ns.InitDB()
     BaryshCharDB = BaryshCharDB or {}
     local db, cdb = BaryshDB, BaryshCharDB
     db.schema = db.schema or 1
+    initData(db)
     db.profile = copyDefaults(ns.defaults, db.profile or {})
     cdb.profileMode = cdb.profileMode or "account"
     if cdb.profileMode == "char" then

@@ -38,6 +38,19 @@ def test_verdicts_by_time_left(logic):
     assert d["expiredUnits"] == 4
 
 
+def test_long_gap_between_scans_makes_sales_unknown(logic):
+    old = [(1, 10, VERYLONG), (2, 20, LONG)]
+    # 15 minutes later: both counted as sold.
+    d = to_py(logic.ns.ScanDiff.Diff(logic.lots(*old), logic.lots(), 15 * 60))
+    assert d["soldUnits"] == 3
+    # 3 hours later: the "2-12 h" lot may have expired on its own.
+    d = to_py(logic.ns.ScanDiff.Diff(logic.lots(*old), logic.lots(), 3 * 3600))
+    assert {r["price"]: r["verdict"] for r in d["removed"]} == {10: "sold", 20: "unknown"}
+    # Two days later: nothing can be called a sale.
+    d = to_py(logic.ns.ScanDiff.Diff(logic.lots(*old), logic.lots(), 2 * 86400))
+    assert d["soldUnits"] == 0 and d["unknownUnits"] == 3
+
+
 def test_identical_lots_one_sold(logic):
     old = [(1, 50, VERYLONG), (1, 50, VERYLONG), (1, 50, LONG)]
     new = [(1, 50, VERYLONG), (1, 50, LONG)]

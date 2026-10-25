@@ -11,11 +11,30 @@ ScanDiff.SOLD = "sold"
 ScanDiff.UNKNOWN = "unknown"
 ScanDiff.EXPIRED = "expired"
 
+-- Shortest time a lot in each band still had left.
+local BAND_MIN_SECONDS = {
+    [Lots.TL_SHORT] = 0,
+    [Lots.TL_MEDIUM] = 30 * 60,
+    [Lots.TL_LONG] = 2 * 3600,
+    [Lots.TL_VERYLONG] = 12 * 3600,
+}
+
 -- What a lot that vanished with this time-left band most likely was.
-function ScanDiff.Verdict(tl)
-    if tl >= Lots.TL_LONG then return ScanDiff.SOLD end
-    if tl == Lots.TL_MEDIUM then return ScanDiff.UNKNOWN end
-    return ScanDiff.EXPIRED
+-- elapsed = seconds since the scan that saw it; if the lot could have run out in that time,
+-- a "sold" guess becomes "unknown".
+function ScanDiff.Verdict(tl, elapsed)
+    local v
+    if tl >= Lots.TL_LONG then
+        v = ScanDiff.SOLD
+    elseif tl == Lots.TL_MEDIUM then
+        v = ScanDiff.UNKNOWN
+    else
+        v = ScanDiff.EXPIRED
+    end
+    if v == ScanDiff.SOLD and elapsed and elapsed >= (BAND_MIN_SECONDS[tl] or 0) then
+        v = ScanDiff.UNKNOWN
+    end
+    return v
 end
 
 local function byTl(a, b) return a.tl < b.tl end
@@ -85,10 +104,10 @@ local function findReductions(removed, added)
     return keptRemoved, keptAdded, reduced
 end
 
--- old, new: lot lists of one item. Returns
+-- old, new: lot lists of one item; elapsed: seconds between the two scans (optional). Returns
 -- { added = lots, removed = lots with .verdict, reduced = { {price, from, to, tl} },
 --   soldUnits, soldValue, unknownUnits, expiredUnits, changed }
-function ScanDiff.Diff(old, new)
+function ScanDiff.Diff(old, new, elapsed)
     local removed, added = {}, {}
     local og, ng = groupByKey(old), groupByKey(new)
     for key, olds in pairs(og) do
@@ -108,7 +127,7 @@ function ScanDiff.Diff(old, new)
         soldUnits = 0, soldValue = 0, unknownUnits = 0, expiredUnits = 0,
     }
     for _, l in ipairs(Lots.Sort(removed)) do
-        local v = ScanDiff.Verdict(l.tl)
+        local v = ScanDiff.Verdict(l.tl, elapsed)
         r.removed[#r.removed + 1] = { qty = l.qty, price = l.price, tl = l.tl, verdict = v }
         if v == ScanDiff.SOLD then
             r.soldUnits = r.soldUnits + l.qty

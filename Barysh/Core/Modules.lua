@@ -78,4 +78,5 @@ end
 function ns.SetModuleEnabled(name, on)
     ns.settings.modules[name] = on and true or false
     ns.ApplyModuleSettings()
+    if ns.UI and ns.UI.ModulesChanged then ns.UI.ModulesChanged() end
 end
