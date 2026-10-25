@@ -1,22 +1,50 @@
-# Game data and personal files
+# --- Game data and personal files (never commit) ---
+# Market statistics written by BaryshSync
 Barysh/Data/Market.lua
+# SavedVariables and anything copied from the WoW folder
 WTF/
 SavedVariables/
 *.lua.bak
+*.lua.old
+# BaryshSync backups and exports for analysis
 backups/
 exports/
+*.log
 
-# BaryshSync local state
+# --- BaryshSync local state ---
 sync/config.toml
 *.sqlite
 *.sqlite3
 *.db
+*.db-journal
+# Google service account keys
 credentials*.json
 *service-account*.json
+token*.json
+.env
+.env.*
 
-# Python
+# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
 .venv/
+venv/
 *.egg-info/
+build/
+dist/
+
+# --- Editors and OS ---
+.vscode/
+.idea/
+*.swp
+*~
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Claude Code local settings ---
+.claude/settings.local.json
+
+# --- Git helper files not needed by the project ---
+.gitattributes
