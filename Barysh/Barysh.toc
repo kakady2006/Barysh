@@ -29,6 +29,14 @@ Logic\DisenchantPick.lua
 Logic\CostBasis.lua
 Logic\MailClassify.lua
 Logic\Ledger.lua
+Logic\Deals.lua
+Logic\Selling.lua
+Logic\Serialize.lua
+Logic\Lists.lua
+Logic\Stock.lua
+Logic\Trade.lua
+Logic\Recipes.lua
+Logic\MarketStats.lua
 
 Adapters\AuctionAPI.lua
 Adapters\ItemsAPI.lua
