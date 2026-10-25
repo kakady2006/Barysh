@@ -37,7 +37,7 @@ function M.Rules()
     local key = ns.Prices.DefaultKey()
     return {
         quality = s.quality,
-        exclude = ns.settings.lists.noDisenchant,
+        exclude = ns.settings.lists.noDisenchant.items,
         skipBetterToSell = s.skipBetterToSell,
         deValue = function(item) return ns.DisenchantValue(item.link or item.itemID, key) end,
         sellValue = function(item)

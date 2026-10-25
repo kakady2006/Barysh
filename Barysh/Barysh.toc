@@ -42,16 +42,28 @@ Adapters\AuctionAPI.lua
 Adapters\ItemsAPI.lua
 Adapters\BagsAPI.lua
 Adapters\MailAPI.lua
+Adapters\MerchantAPI.lua
+Adapters\TradeAPI.lua
+Adapters\ProfessionAPI.lua
 
 Data\Market.lua
 
+Modules\Lists.lua
+Modules\ImportExport.lua
+Modules\Inventory.lua
 Modules\Scan.lua
 Modules\Tooltip.lua
+Modules\Neutral.lua
 Modules\Deals.lua
 Modules\Selling.lua
+Modules\Stock.lua
+Modules\Vendor.lua
+Modules\Market.lua
 Modules\Mail.lua
 Modules\Ledger.lua
 Modules\Disenchanter.lua
+Modules\Recipes.lua
+Modules\Trade.lua
 Modules\Sync.lua
 Core\Probe.lua
 

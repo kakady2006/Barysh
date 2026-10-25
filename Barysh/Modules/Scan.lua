@@ -8,6 +8,12 @@ local L = ns.L
 local M = ns:NewModule("Scan", { group = "core", canDisable = false })
 ns.Scan = M
 
+-- Other modules (deals, alerts) react to every applied scan: fn({ key, full, items, changed, ids }).
+M.listeners = {}
+function M.OnApplied(fn)
+    M.listeners[#M.listeners + 1] = fn
+end
+
 local DAY = 24 * 60 * 60
 M.RESPONSE_TIMEOUT = 30     -- seconds to wait for REPLICATE_ITEM_LIST_UPDATE
 M.ROWS_PER_STEP = 400       -- rows read per job step
@@ -169,7 +175,9 @@ function M.ApplyScan(key, t, byItem, full, rows, onDone)
             end
         end
         ns.Prices.Invalidate()
-        if onDone then onDone({ items = #ids, changed = changed }) end
+        local stats = { items = #ids, changed = changed, full = full, key = key, ids = ids }
+        for _, fn in ipairs(M.listeners) do ns.Safe(fn, stats) end
+        if onDone then onDone(stats) end
     end
     return Jobs.Run("apply", step, finish)
 end
@@ -305,7 +313,7 @@ end
 -- Quick scan by list --------------------------------------------------------------------
 
 function M.QuickList()
-    return ns.settings.lists.quick
+    return ns.ItemLists.Ids("quick")
 end
 
 function M.StartQuick(list)
@@ -359,6 +367,7 @@ local function quickResult(itemID, lots)
 end
 
 function M:OnCommodityResults(_, itemID)
+    ns.Items.SetCommodity(itemID, true)
     if M.quick and M.quick.current == itemID then
         quickResult(itemID, (AH.CommodityResults(itemID)))
     end
@@ -366,6 +375,7 @@ end
 
 function M:OnItemResults(_, itemKey)
     local q = M.quick
+    if itemKey and itemKey.itemID then ns.Items.SetCommodity(itemKey.itemID, false) end
     if q and itemKey and q.current == itemKey.itemID then
         quickResult(itemKey.itemID, (AH.ItemResults(itemKey)))
     end

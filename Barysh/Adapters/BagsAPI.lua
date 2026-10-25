@@ -32,3 +32,46 @@ function Bags.Count(itemID)
     end)
     return n
 end
+
+-- VERIFY: bank containers on Forever. Classic: -1 (main bank) and bags NUM_BAG_SLOTS+1 .. +NUM_BANKBAGSLOTS.
+function Bags.BankContainers()
+    local list = { BANK_CONTAINER or -1 }
+    local first = (NUM_BAG_SLOTS or 4) + 1
+    for b = first, first + (NUM_BANKBAGSLOTS or 7) - 1 do list[#list + 1] = b end
+    return list
+end
+
+-- { [itemID] = count } over the given containers.
+function Bags.Counts(containers)
+    local out = {}
+    for _, bag in ipairs(containers) do
+        local n = C_Container.GetContainerNumSlots(bag) or 0
+        for slot = 1, n do
+            local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info and info.itemID then out[info.itemID] = (out[info.itemID] or 0) + (info.stackCount or 1) end
+        end
+    end
+    return out
+end
+
+function Bags.BagContainers()
+    local list = {}
+    for b = Bags.FIRST, Bags.LAST do list[#list + 1] = b end
+    return list
+end
+
+-- First bag slot holding the item, or nil.
+function Bags.Find(itemID)
+    for bag = Bags.FIRST, Bags.LAST do
+        local n = C_Container.GetContainerNumSlots(bag) or 0
+        for slot = 1, n do
+            local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info and info.itemID == itemID and not info.isLocked then return bag, slot, info end
+        end
+    end
+end
+
+-- Sells (merchant open) or uses the item in a slot.
+function Bags.Use(bag, slot)
+    C_Container.UseContainerItem(bag, slot)
+end

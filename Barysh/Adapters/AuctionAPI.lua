@@ -125,3 +125,127 @@ end
 function AH.Cut(key)
     return AH.IsNeutralKey(key) and ns.const.cutNeutral or ns.const.cutFaction
 end
+
+function AH.NeutralKey()
+    return (GetRealmName() or "?") .. "|Neutral"
+end
+
+-- The other house for arbitrage: faction <-> neutral.
+function AH.OtherKey(key)
+    if AH.IsNeutralKey(key) then return AH.FactionKey() end
+    return AH.NeutralKey()
+end
+
+-- VERIFY: deposit on Forever. Estimate before the client can tell (CalculateItemDeposit needs the item
+-- in bags): a share of the vendor price per unit for an 8-hour lot, as in Classic.
+AH.DEPOSIT_RATE = 0.15
+function AH.DepositEstimate(vendorPrice, key)
+    local rate = AH.DEPOSIT_RATE * (AH.IsNeutralKey(key) and 5 or 1)
+    return math.floor((vendorPrice or 0) * rate)
+end
+
+-- Buying ------------------------------------------------------------------------------------
+-- Commodities: StartCommoditiesPurchase (needs a click) -> COMMODITY_PRICE_UPDATED -> Confirm.
+-- Items: PlaceBid(auctionID, buyout) (needs a click) with an auctionID from an item search.
+
+function AH.StartCommodityPurchase(itemID, qty)
+    C_AuctionHouse.StartCommoditiesPurchase(itemID, qty)
+end
+
+function AH.ConfirmCommodityPurchase(itemID, qty)
+    C_AuctionHouse.ConfirmCommoditiesPurchase(itemID, qty)
+end
+
+function AH.CancelCommodityPurchase()
+    if C_AuctionHouse.CancelCommoditiesPurchase then C_AuctionHouse.CancelCommoditiesPurchase() end
+end
+
+function AH.BuyItem(auctionID, buyout)
+    C_AuctionHouse.PlaceBid(auctionID, buyout)
+end
+
+-- Posting ------------------------------------------------------------------------------------
+
+-- VERIFY: auction durations on Forever. Retail: 1 = 12 h, 2 = 24 h, 3 = 48 h; auxForever saw 2/8/24 h.
+-- Barysh posts "short" (8 h per TZ) or "long" (24 h).
+AH.DURATION = { short = 2, long = 3 }
+AH.DURATION_HOURS = { [1] = 2, [2] = 8, [3] = 24 }
+
+-- VERIFY: retail silently drops commodity posts with copper in the unit price.
+-- auxForever reports copper values work on Forever; SupportsCopperValues() tells for sure.
+function AH.RoundPostPrice(price)
+    if C_AuctionHouse.SupportsCopperValues and C_AuctionHouse.SupportsCopperValues() then return price end
+    return math.max(100, math.floor(price / 100) * 100)
+end
+
+function AH.Location(bag, slot)
+    return ItemLocation:CreateFromBagAndSlot(bag, slot)
+end
+
+-- true = commodity (bought by quantity), false = item, nil = unknown.
+function AH.IsCommodityLocation(loc)
+    if not C_AuctionHouse.GetItemCommodityStatus then return nil end
+    local status = C_AuctionHouse.GetItemCommodityStatus(loc)
+    if status == 2 then return true elseif status == 1 then return false end
+end
+
+function AH.Deposit(loc, itemID, commodity, durationKey, qty)
+    local d = AH.DURATION[durationKey]
+    local ok, v
+    if commodity then
+        ok, v = pcall(C_AuctionHouse.CalculateCommodityDeposit, itemID, d, qty)
+    else
+        ok, v = pcall(C_AuctionHouse.CalculateItemDeposit, loc, d, qty)
+    end
+    return ok and v or nil
+end
+
+-- Returns needsConfirmation. Both calls need a click.
+function AH.Post(loc, commodity, durationKey, qty, unitPrice)
+    local d = AH.DURATION[durationKey]
+    if commodity then
+        return C_AuctionHouse.PostCommodity(loc, d, qty, unitPrice)
+    end
+    return C_AuctionHouse.PostItem(loc, d, qty, nil, unitPrice * qty)
+end
+
+function AH.ConfirmPost(loc, commodity, durationKey, qty, unitPrice)
+    local d = AH.DURATION[durationKey]
+    if commodity then
+        if C_AuctionHouse.ConfirmPostCommodity then return C_AuctionHouse.ConfirmPostCommodity(loc, d, qty, unitPrice) end
+    elseif C_AuctionHouse.ConfirmPostItem then
+        return C_AuctionHouse.ConfirmPostItem(loc, d, qty, nil, unitPrice * qty)
+    end
+end
+
+-- Own auctions -------------------------------------------------------------------------------
+
+function AH.QueryOwned()
+    if C_AuctionHouse.QueryOwnedAuctions then C_AuctionHouse.QueryOwnedAuctions({}) end
+end
+
+-- { {auctionID, itemID, link, qty, price (unit), timeLeft, sold}, ... }
+function AH.Owned()
+    local out = {}
+    if not C_AuctionHouse.GetNumOwnedAuctions then return out end
+    for i = 1, C_AuctionHouse.GetNumOwnedAuctions() do
+        local a = C_AuctionHouse.GetOwnedAuctionInfo(i)
+        if a and a.itemKey then
+            local qty = a.quantity or 1
+            out[#out + 1] = {
+                auctionID = a.auctionID, itemID = a.itemKey.itemID, link = a.itemLink, qty = qty,
+                price = a.buyoutAmount and math.floor(a.buyoutAmount / qty) or nil,
+                timeLeft = a.timeLeftSeconds, sold = a.status == 1,
+            }
+        end
+    end
+    return out
+end
+
+function AH.CancelCost(auctionID)
+    if C_AuctionHouse.GetCancelCost then return C_AuctionHouse.GetCancelCost(auctionID) end
+end
+
+function AH.Cancel(auctionID)
+    C_AuctionHouse.CancelAuction(auctionID)
+end

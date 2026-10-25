@@ -136,7 +136,8 @@ def test_quick_scan_updates_listed_items(game):
         WowMock.searchResults[{LINEN}] = {{ commodity = true, rows = {{ {{ 30, 9, 50000, 1 }}, {{ 5, 12, 7000, 2 }} }} }}
         WowMock.searchResults[{GLOVES}] = {{ commodity = false, rows = {{ {{ 1, 4500, 3, 3 }} }} }}
     """)
-    game.ns.settings.lists.quick = game.to_lua([LINEN, GLOVES])
+    game.ns.ItemLists.Add("quick", LINEN)
+    game.ns.ItemLists.Add("quick", GLOVES)
     ok = game.ns.Scan.StartQuick()
     assert ok is True or (isinstance(ok, tuple) and ok[0])
     game.mock.Advance(5)
@@ -335,9 +336,9 @@ def test_quick_list_commands(game):
     slash("quickadd |cffffffff|Hitem:5000::::::::|h[Gloves]|h|r")
     slash("quickadd Strange Dust")
     slash(f"quickadd {LINEN}")
-    assert to_py(game.ns.settings.lists.quick) == [LINEN, GLOVES, DUST]
+    assert to_py(game.ns.ItemLists.Ids("quick")) == sorted([LINEN, GLOVES, DUST])
     slash("quickdel Gloves")
-    assert to_py(game.ns.settings.lists.quick) == [LINEN, DUST]
+    assert to_py(game.ns.ItemLists.Ids("quick")) == sorted([LINEN, DUST])
     slash("quickadd No Such Thing")
     assert "Предмет не найден" in game.mock.printed[len(game.mock.printed)]
 

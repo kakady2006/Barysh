@@ -19,6 +19,32 @@ ns.defaults = {
         caution = "normal", -- normal | careful (35th percentile) | bold (65th percentile)
         soundFrom = 5 * COPPER_PER_GOLD,
         popup = false,
+        crashAlert = true, -- price fell 30%+ in 24 h on a big volume
+        affordable = false, -- show only what the current gold can pay for
+        types = { easy = true, disenchant = true, resale = true, stock = true, craft = true, arbitrage = true },
+    },
+    selling = {
+        stack = 0,          -- 0 = one lot for commodities; 20 or 40 = stacks for crates
+        expensive = 50 * COPPER_PER_GOLD, -- lots worth more go for 24 hours
+        returned = true,    -- returned lots join the queue
+    },
+    vendor = {
+        junk = true,        -- grey items
+        easy = true,        -- bought as "easy money"
+        better = true,      -- worth more to the vendor than on the auction house or disenchanted
+    },
+    mail = {
+        strangerWarn = true,
+    },
+    trade = {
+        services = {},      -- price list: { {name, client, own, reagents = { {itemID, qty} }} }
+        ask = true,         -- the "What was it?" window for unclear trades
+    },
+    recipes = {
+        shown = true,
+    },
+    market = {
+        house = "current",  -- current | faction | neutral | both
     },
     summaryDays = 7,
     staleHours = 24,
@@ -31,10 +57,13 @@ ns.defaults = {
     tooltip = {
         enabled = true,
     },
+    -- Item lists (Logic/Lists.lua): { items = { [itemID] = { src, t, buyBelow, cap, note } } }
     lists = {
-        quick = {},    -- itemIDs for the quick scan
-        noBuy = {},    -- [itemID] = true
-        noDisenchant = {}, -- [itemID] = true
+        quick = { items = {} },
+        stock = { items = {} },
+        noBuy = { items = {} },
+        noDisenchant = { items = {} },
+        custom = {},        -- name -> list
     },
     minimap = { angle = 200, hidden = false },
 }
@@ -47,6 +76,24 @@ local function initData(db)
     db.chars = db.chars or {}     -- money and last login per character
     db.probe = db.probe or {}     -- facts about the client for docs/ingame-checklist.md
     db.errors = db.errors or {}
+    db.posted = db.posted or {}       -- own posted lots: deposit is lost if they come back
+    db.purchases = db.purchases or {} -- itemID -> deal type of the last purchase
+    db.sellMarked = db.sellMarked or {} -- itemID -> true: put into the selling queue ("Exit", "To selling")
+    db.stockBelow = db.stockBelow or {} -- itemID -> first day below cost
+    db.playtime = db.playtime or {}   -- day -> seconds online
+    db.clients = db.clients or {}     -- trade clients, local only
+    db.orders = db.orders or {}       -- client name -> reagents handed over for a craft
+    db.recipes = db.recipes or {}     -- character -> recipeID -> recipe (for raw materials deals)
+    db.exportRequests = db.exportRequests or {} -- "Export for analysis" requests for BaryshSync
+end
+
+-- Lists saved before the { items = {} } format.
+local function migrateLists(profile)
+    local lists = profile and profile.lists
+    if type(lists) ~= "table" then return end
+    for _, name in ipairs(ns.Lists.BUILTIN) do
+        if lists[name] ~= nil then lists[name] = ns.Lists.Migrate(lists[name]) end
+    end
 end
 
 local function copyDefaults(src, dst)
@@ -69,6 +116,8 @@ function ns.InitDB()
     local db, cdb = BaryshDB, BaryshCharDB
     db.schema = db.schema or 1
     initData(db)
+    migrateLists(db.profile)
+    migrateLists(cdb.profile)
     db.profile = copyDefaults(ns.defaults, db.profile or {})
     cdb.profileMode = cdb.profileMode or "account"
     if cdb.profileMode == "char" then

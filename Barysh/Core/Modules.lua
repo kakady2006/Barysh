@@ -47,6 +47,11 @@ function ns.IsModuleWanted(name)
     return true
 end
 
+function ns.IsModuleEnabled(name)
+    local m = ns.modules[name]
+    return m ~= nil and m.enabled
+end
+
 function ns.EnableModule(name)
     local m = ns.modules[name]
     if not m or m.enabled then return end

@@ -54,6 +54,20 @@ function MailAPI.TakeItem(i, slot)
     TakeInboxItem(i, slot)
 end
 
+function MailAPI.Return(i)
+    ReturnInboxItem(i)
+end
+
+-- Money and all attachments of one mail.
+function MailAPI.TakeAll(i)
+    if AutoLootMailItem then
+        AutoLootMailItem(i)
+    else
+        TakeInboxMoney(i)
+        for _, it in ipairs(MailAPI.Items(i)) do TakeInboxItem(i, it.slot) end
+    end
+end
+
 -- Client format strings for auction mail subjects.
 function MailAPI.SubjectFormats()
     return {
