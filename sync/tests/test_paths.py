@@ -31,7 +31,7 @@ def test_market_file_inside_addon(tmp_path):
 
 def test_config_with_bom(tmp_path):
     f = tmp_path / "config.toml"
-    f.write_bytes("\ufeffgame_dir = 'D:\\\\Games\\\\_forever_'\ngithub_issues = false\n".encode("utf-8"))
+    f.write_bytes('\ufeffgame_dir = "D:\\\\Games\\\\_forever_"\ngithub_issues = false\n'.encode("utf-8"))
     cfg = config.load(f)
     assert str(cfg.game_dir) == "D:\\Games\\_forever_"
     assert cfg.github_issues is False
