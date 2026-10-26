@@ -29,7 +29,9 @@ ns.defaults = {
         returned = true,    -- returned lots join the queue
     },
     vendor = {
-        junk = true,        -- grey items
+        -- Sell everything of these qualities (Vendor.QUALITIES); grey = junk.
+        quality = { grey = true, white = false, green = false, blue = false, epic = false },
+        keepValuable = true, -- quality modes skip what is worth more on the auction house or disenchanted
         easy = true,        -- bought as "easy money"
         better = true,      -- worth more to the vendor than on the auction house or disenchanted
     },
@@ -63,6 +65,8 @@ ns.defaults = {
         stock = { items = {} },
         noBuy = { items = {} },
         noDisenchant = { items = {} },
+        vendorSell = { items = {} }, -- always sold to the vendor
+        vendorKeep = { items = {} }, -- never sold to the vendor
         custom = {},        -- name -> list
     },
     minimap = { angle = 200, hidden = false },
@@ -96,6 +100,14 @@ local function migrateLists(profile)
     end
 end
 
+-- vendor.junk (one checkbox for grey items) became vendor.quality.grey.
+local function migrateVendor(profile)
+    local v = profile and profile.vendor
+    if type(v) ~= "table" or v.junk == nil then return end
+    if type(v.quality) ~= "table" then v.quality = { grey = v.junk } end
+    v.junk = nil
+end
+
 local function copyDefaults(src, dst)
     for k, v in pairs(src) do
         if type(v) == "table" then
@@ -118,6 +130,8 @@ function ns.InitDB()
     initData(db)
     migrateLists(db.profile)
     migrateLists(cdb.profile)
+    migrateVendor(db.profile)
+    migrateVendor(cdb.profile)
     db.profile = copyDefaults(ns.defaults, db.profile or {})
     cdb.profileMode = cdb.profileMode or "account"
     if cdb.profileMode == "char" then

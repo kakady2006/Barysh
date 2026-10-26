@@ -190,9 +190,15 @@ function build.trade(l)
 
     l:Header(L.MODULE_Vendor)
     l:Module("Vendor")
-    l:Check(L.SET_VENDOR_JUNK, { "vendor", "junk" }, nil, moduleOn("Vendor"))
+    l:Note(L.SET_VENDOR_QUALITY)
+    for _, q in ipairs(ns.Vendor.QUALITY_ORDER) do
+        l:Check(L["SET_VENDOR_Q_" .. q], { "vendor", "quality", q }, L.SET_VENDOR_Q_TIP, moduleOn("Vendor"))
+    end
+    l:Check(L.SET_VENDOR_KEEP_VALUABLE, { "vendor", "keepValuable" }, L.SET_VENDOR_KEEP_VALUABLE_TIP, moduleOn("Vendor"))
     l:Check(L.SET_VENDOR_EASY, { "vendor", "easy" }, nil, moduleOn("Vendor"))
     l:Check(L.SET_VENDOR_BETTER, { "vendor", "better" }, nil, moduleOn("Vendor"))
+    l:Note(L.SET_VENDOR_LISTS)
+    UI.BuildListsEditor(l, { "vendorSell", "vendorKeep" })
 
     l:Header(L.MODULE_Market)
     l:Module("Market")
@@ -263,12 +269,15 @@ function build.service(l)
 end
 
 -- Lists editor (settings → Utility). TZ: "Списки товаров". -------------------------------------
+-- fixed: only these lists, without creating or deleting (the vendor lists in Trade).
 
-function UI.BuildListsEditor(l)
+function UI.BuildListsEditor(l, fixed)
     local p = l.parent
-    local state = { name = "quick" }
+    local first = fixed and fixed[1] or "quick"
+    local state = { name = first }
+    local function listNames() return fixed or ns.ItemLists.Names() end
     local listCycle = UI.Button(p, "", 170, function(self)
-        local names = ns.ItemLists.Names()
+        local names = listNames()
         local idx = 1
         for i, n in ipairs(names) do if n == state.name then idx = i end end
         state.name = names[idx % #names + 1]
@@ -291,7 +300,7 @@ function UI.BuildListsEditor(l)
     l:Add(newList, 0, 184)
     local delList = UI.Button(p, L.BTN_DELETE_LIST, 100, function()
         if ns.ItemLists.Delete(state.name) then
-            state.name = "quick"
+            state.name = first
             UI.RefreshSettings()
         end
     end)
@@ -348,11 +357,13 @@ function UI.BuildListsEditor(l)
     local editor = { Update = function()
         listCycle:SetText(ns.ItemLists.Title(state.name) .. " ›")
         delList:SetEnabled(not ns.ItemLists.IsBuiltin(state.name))
+        newList:SetShown(not fixed)
+        delList:SetShown(not fixed)
         local data = {}
         local lst = ns.ItemLists.Get(state.name)
         if not lst then
-            state.name = "quick"
-            lst = ns.ItemLists.Get("quick")
+            state.name = first
+            lst = ns.ItemLists.Get(first)
         end
         for _, id in ipairs(ns.ItemLists.Ids(state.name)) do
             local e = lst.items[id]
@@ -521,6 +532,7 @@ function UI.RefreshSettings()
     if page then page.layout:Update() end
     if ns.Disenchanter and ns.Disenchanter.enabled then ns.Disenchanter.SetShown(ns.settings.disenchant.shown) end
     if UI.minimapButton then UI.minimapButton:SetShown(not ns.settings.minimap.hidden) end
+    if ns.Vendor and ns.Vendor.merchantOpen then ns.Vendor.UpdateButton() end
     UI.Refresh()
 end
 

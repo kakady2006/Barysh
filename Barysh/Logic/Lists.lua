@@ -1,12 +1,12 @@
 local _, ns = ...
 
--- Item lists: quick scan, stock, do not buy, disenchant exclusions, own lists. TZ: "Списки товаров".
+-- Item lists: quick scan, stock, do not buy, disenchant exclusions, vendor (always sell / never sell), own lists. TZ: "Списки товаров".
 -- list = { items = { [itemID] = { src = "manual" | "import", t = added, buyBelow =, cap =, note = } } }
 -- buyBelow/cap (copper) and note matter for the stock list; other lists ignore them.
 local Lists = {}
 ns.Lists = Lists
 
-Lists.BUILTIN = { "quick", "stock", "noBuy", "noDisenchant" }
+Lists.BUILTIN = { "quick", "stock", "noBuy", "noDisenchant", "vendorSell", "vendorKeep" }
 Lists.FIELDS = { "buyBelow", "cap", "note" }
 
 function Lists.New()

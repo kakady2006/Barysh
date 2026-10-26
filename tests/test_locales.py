@@ -18,7 +18,7 @@ FAMILIES = {
     "IMPORT_ERR_": ["format", "version", "compressed", "data"],
     "KIND_": ["ah_sell", "ah_buy", "ah_expired", "disenchant", "vendor_sell", "vendor_buy", "craft", "cod",
               "trade_sell", "trade_buy", "service"],
-    "LIST_": ["quick", "stock", "noBuy", "noDisenchant"],
+    "LIST_": ["quick", "stock", "noBuy", "noDisenchant", "vendorSell", "vendorKeep"],
     "MAILKIND_": ["sold", "won", "expired", "cancelled", "outbid"],
     "MAIL_STOP_": ["timeout", "full", "closed"],
     "MODULE_": ["Scan", "Tooltip", "Deals", "Selling", "Stock", "Vendor", "Market", "Neutral", "Mail", "Ledger",
@@ -32,7 +32,7 @@ FAMILIES = {
     "TRADEKIND_": ["service", "craft", "trade_sell", "trade_buy", "reagents_in", "ignore"],
     "TRADE_PAY_": ["ok", "less", "more"],
     "USE_": ["ah", "disenchant", "vendor"],
-    "VENDOR_": ["junk", "easy", "better"],
+    "VENDOR_": ["list", "junk", "quality", "easy", "better"],
 }
 
 

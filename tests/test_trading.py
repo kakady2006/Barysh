@@ -224,6 +224,51 @@ def test_easy_money_purchase_goes_to_vendor(game):
     assert to_py(game.ns.Vendor.Candidates())[0]["reason"] == "easy"
 
 
+def vendor_reasons(game):
+    return {c["itemID"]: c["reason"] for c in to_py(game.ns.Vendor.Candidates())}
+
+
+def test_vendor_quality_modes(game):
+    bag(game, 1, JUNK, 1)
+    bag(game, 2, GLOVES, 1)
+    bag(game, 3, LINEN, 20)
+    assert vendor_reasons(game) == {JUNK: "junk"}
+    q = game.ns.settings.vendor.quality
+    q.grey, q.green = False, True
+    game.ns.settings.vendor.keepValuable = False
+    assert vendor_reasons(game) == {GLOVES: "quality"}
+    q.white = True
+    assert vendor_reasons(game) == {GLOVES: "quality", LINEN: "quality"}
+
+
+def test_vendor_quality_keeps_valuable(game):
+    synced(game, {LINEN: (1000, 5.0, 40)})
+    bag(game, 3, LINEN, 20)
+    game.ns.settings.vendor.quality.white = True
+    assert vendor_reasons(game) == {}
+    game.ns.settings.vendor.keepValuable = False
+    assert vendor_reasons(game) == {LINEN: "quality"}
+
+
+def test_vendor_lists_always_and_never(game):
+    bag(game, 1, JUNK, 1)
+    bag(game, 2, GLOVES, 1)
+    IL = game.ns.ItemLists
+    IL.Add("vendorSell", GLOVES)
+    IL.Add("vendorKeep", JUNK)
+    assert vendor_reasons(game) == {GLOVES: "list"}
+    # "Never sell" wins over "always sell".
+    IL.Add("vendorKeep", GLOVES)
+    assert vendor_reasons(game) == {}
+
+
+def test_vendor_junk_setting_migrates(addon):
+    addon.g.BaryshDB = addon.to_lua({"profile": {"vendor": {"junk": False}}})
+    addon.login()
+    v = addon.ns.settings.vendor
+    assert v.junk is None and v.quality.grey is False and v.quality.green is False
+
+
 def test_stock_positions_and_exit_after_three_days(game):
     synced(game, {BOLT: (1000, 5.0, 40)})
     game.ns.ItemLists.Add("stock", BOLT, game.to_lua({"note": "под рейд"}))

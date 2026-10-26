@@ -3,19 +3,30 @@ local _, ns = ...
 local Items, Bags, CostBasis, MerchantAPI = ns.Items, ns.Bags, ns.CostBasis, ns.MerchantAPI
 local L = ns.L
 
--- "Sell to vendor" button: grey junk, "easy money" purchases and items worth more to the vendor
--- than on the auction house or disenchanted. Everything goes to the ledger. TZ: "Торговец".
+-- "Sell to vendor" button: chosen qualities, the "always sell" list, "easy money" purchases and items
+-- worth more to the vendor than on the auction house or disenchanted. Everything goes to the ledger. TZ: "Торговец".
 local M = ns:NewModule("Vendor", { group = "trade" })
 ns.Vendor = M
 
 M.STEP_DELAY = 0.2
 
--- Why an item goes to the vendor: "junk" | "easy" | "better" | nil.
+-- Quality modes in settings: item quality -> key of settings.vendor.quality.
+M.QUALITIES = { [0] = "grey", [1] = "white", [2] = "green", [3] = "blue", [4] = "epic" }
+M.QUALITY_ORDER = { "grey", "white", "green", "blue", "epic" }
+
+-- Why an item goes to the vendor: "list" | "junk" | "quality" | "easy" | "better" | nil.
+-- The "never sell" list wins over everything, the "always sell" list over the rest.
 function M.Reason(itemID, info)
     local s = ns.settings.vendor
     if not info or (info.sellPrice or 0) <= 0 then return nil end
+    if ns.ItemLists.Has("vendorKeep", itemID) then return nil end
+    if ns.ItemLists.Has("vendorSell", itemID) then return "list" end
     if ns.ItemLists.Has("stock", itemID) or ns.db.sellMarked[itemID] then return nil end
-    if s.junk and info.quality == 0 then return "junk" end
+    local q = M.QUALITIES[info.quality or -1]
+    if q and s.quality[q] then
+        if info.quality == 0 then return "junk" end
+        if not s.keepValuable or ns.BestUse(itemID) == "vendor" then return "quality" end
+    end
     local bought = ns.db.purchases[itemID]
     if s.easy and bought and bought.type == "easy" then return "easy" end
     -- Weapons and armour are never sold as "better to vendor": it may be gear the player keeps.
