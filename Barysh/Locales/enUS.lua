@@ -334,6 +334,8 @@ ns.RegisterLocale("enUS", {
     VENDOR_junk = "junk",
     VENDOR_easy = "easy money",
     VENDOR_better = "better to vendor",
+    VENDOR_AUTO_SOLD = "Sold to the vendor automatically: %d, received %s. They can be bought back on the Buyback tab.",
+    VENDOR_AUTO_LEFT = "%d more with the \"Sell to vendor\" button (no more than 12 at once, so everything can be bought back).",
     VENDOR_list = "in the list",
     VENDOR_quality = "by quality",
 
@@ -418,6 +420,8 @@ ns.RegisterLocale("enUS", {
     SET_VENDOR_Q_TIP = "Everything of this quality in the bags goes to the vendor, except stock, items set aside for selling and the \"Never sell\" list. Equipped gear is not touched.",
     SET_VENDOR_KEEP_VALUABLE = "By quality — only if the vendor pays more",
     SET_VENDOR_KEEP_VALUABLE_TIP = "White, green and better items are not sold to the vendor when the auction house or disenchanting gives more. Grey is always sold.",
+    SET_VENDOR_AUTO = "Sell as soon as the vendor opens",
+    SET_VENDOR_AUTO_TIP = "No more than 12 stacks at once — what the Buyback tab holds, so any of them can be bought back. The rest goes with the button. Hold Shift while opening the vendor to skip.",
     SET_VENDOR_LISTS = "Lists: \"Always sell\" and \"Never sell\" (exclusions)",
     SET_VENDOR_EASY = "Sell easy money purchases",
     SET_VENDOR_BETTER = "Sell what is worth more to the vendor",

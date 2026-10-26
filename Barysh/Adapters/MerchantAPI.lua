@@ -4,6 +4,9 @@ local _, ns = ...
 local Merchant = {}
 ns.MerchantAPI = Merchant
 
+-- VERIFY: the buyback tab keeps the last 12 sold stacks (one per bag slot), as in Classic.
+Merchant.BUYBACK_SLOTS = 12
+
 -- Item bought from the vendor: itemID, unit price, stack size of one purchase.
 function Merchant.ItemInfo(index)
     local itemID = GetMerchantItemID and GetMerchantItemID(index)

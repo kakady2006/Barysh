@@ -209,6 +209,32 @@ def test_vendor_sells_junk_and_records(game):
     assert game.errors() == []
 
 
+def test_vendor_auto_sells_one_buyback_tab(game):
+    for slot in range(1, 15):
+        bag(game, slot, JUNK, 1)
+    game.ns.settings.vendor.auto = True
+    run(game, "WowMock.merchantOpen = true; WowMock.money = 0")
+    game.fire("MERCHANT_SHOW")
+    game.mock.Advance(5)
+    assert game.mock.money == 12 * 50
+    assert len(to_py(game.ns.Vendor.Candidates())) == 2
+    assert game.errors() == []
+
+
+def test_vendor_auto_off_or_shift(game):
+    bag(game, 1, JUNK, 1)
+    run(game, "WowMock.merchantOpen = true; WowMock.money = 0")
+    game.fire("MERCHANT_SHOW")
+    game.mock.Advance(1)
+    assert game.mock.money == 0
+    game.fire("MERCHANT_CLOSED")
+    game.ns.settings.vendor.auto = True
+    run(game, "WowMock.shift = true")
+    game.fire("MERCHANT_SHOW")
+    game.mock.Advance(1)
+    assert game.mock.money == 0
+
+
 def test_vendor_purchase_recorded(game):
     run(game, f"WowMock.merchant = {{ {{ {BOLT}, 160, 1 }} }}")
     game.fire("MERCHANT_SHOW")

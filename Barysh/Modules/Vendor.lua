@@ -68,11 +68,17 @@ local function record(c)
 end
 
 -- One click sells the whole list, one item at a time while the merchant stays open.
-function M.SellAll()
+-- limit: sell only the first `limit` stacks (automatic selling), the rest stays for the button.
+function M.SellAll(limit)
     if not M.merchantOpen or M.selling then return false end
     local list = M.Candidates()
     if #list == 0 then return false end
-    M.selling = { list = list, i = 0, money = 0 }
+    local left = 0
+    if limit and #list > limit then
+        left = #list - limit
+        for i = #list, limit + 1, -1 do list[i] = nil end
+    end
+    M.selling = { list = list, i = 0, money = 0, auto = limit ~= nil, left = left }
     local function step()
         local s = M.selling
         if not s or not M.merchantOpen then
@@ -83,7 +89,12 @@ function M.SellAll()
         local c = s.list[s.i]
         if not c then
             M.selling = nil
-            ns.Print(L.VENDOR_SOLD:format(s.i - 1, ns.FormatMoney(s.money)))
+            if s.auto then
+                ns.Print(L.VENDOR_AUTO_SOLD:format(s.i - 1, ns.FormatMoney(s.money)))
+                if s.left > 0 then ns.Print(L.VENDOR_AUTO_LEFT:format(s.left)) end
+            else
+                ns.Print(L.VENDOR_SOLD:format(s.i - 1, ns.FormatMoney(s.money)))
+            end
             M.UpdateButton()
             return
         end
@@ -151,6 +162,9 @@ function M:OnEnable()
         createButton()
         if M.button then M.button:Show() end
         M.UpdateButton()
+        -- Automatic selling: no more stacks than the buyback tab keeps, so any of them can be bought back.
+        -- Shift held while opening the vendor skips it.
+        if ns.settings.vendor.auto and not IsShiftKeyDown() then M.SellAll(MerchantAPI.BUYBACK_SLOTS) end
     end)
     self:RegisterEvent("MERCHANT_CLOSED", function()
         M.merchantOpen = false

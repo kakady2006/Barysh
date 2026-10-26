@@ -197,6 +197,7 @@ function build.trade(l)
     l:Check(L.SET_VENDOR_KEEP_VALUABLE, { "vendor", "keepValuable" }, L.SET_VENDOR_KEEP_VALUABLE_TIP, moduleOn("Vendor"))
     l:Check(L.SET_VENDOR_EASY, { "vendor", "easy" }, nil, moduleOn("Vendor"))
     l:Check(L.SET_VENDOR_BETTER, { "vendor", "better" }, nil, moduleOn("Vendor"))
+    l:Check(L.SET_VENDOR_AUTO, { "vendor", "auto" }, L.SET_VENDOR_AUTO_TIP, moduleOn("Vendor"))
     l:Note(L.SET_VENDOR_LISTS)
     UI.BuildListsEditor(l, { "vendorSell", "vendorKeep" })
 

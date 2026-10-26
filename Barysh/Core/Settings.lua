@@ -34,6 +34,7 @@ ns.defaults = {
         keepValuable = true, -- quality modes skip what is worth more on the auction house or disenchanted
         easy = true,        -- bought as "easy money"
         better = true,      -- worth more to the vendor than on the auction house or disenchanted
+        auto = false,       -- sell when the vendor opens, at most one buyback tab (12 stacks)
     },
     mail = {
         strangerWarn = true,
