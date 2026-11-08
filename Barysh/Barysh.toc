@@ -53,6 +53,7 @@ Modules\ImportExport.lua
 Modules\Inventory.lua
 Modules\Scan.lua
 Modules\Tooltip.lua
+Modules\Compat.lua
 Modules\Neutral.lua
 Modules\Deals.lua
 Modules\Selling.lua

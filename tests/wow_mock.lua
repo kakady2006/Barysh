@@ -198,6 +198,7 @@ Enum = {
     AuctionHouseTimeLeftBand = { Short = 0, Medium = 1, Long = 2, VeryLong = 3 },
     AuctionHouseSortOrder = { Price = 0, Name = 1 },
     TooltipDataType = { Item = 0 },
+    TooltipDataLineType = { SellPrice = 11 },
 }
 
 AUCTION_SOLD_MAIL_SUBJECT = "Auction successful: %s"
@@ -206,6 +207,8 @@ AUCTION_EXPIRED_MAIL_SUBJECT = "Auction expired: %s"
 AUCTION_REMOVED_MAIL_SUBJECT = "Auction cancelled: %s"
 AUCTION_OUTBID_MAIL_SUBJECT = "Outbid on %s"
 ERR_INV_FULL = "Inventory is full."
+LOOT_ITEM_SELF = "You receive loot: %s."
+LOOT_ITEM_SELF_MULTIPLE = "You receive loot: %sx%d."
 ATTACHMENTS_MAX_RECEIVE = 16
 NUM_BAG_SLOTS = 4
 
@@ -217,7 +220,9 @@ end
 
 SlashCmdList = {}
 
+Mock.loadedAddOns = {}
 C_AddOns = {
+    IsAddOnLoaded = function(name) return Mock.loadedAddOns[name] == true end,
     GetAddOnMetadata = function(_, field)
         if field == "Version" then return "test" end
     end,
@@ -413,11 +418,12 @@ TooltipDataProcessor = {
     AddTooltipPostCall = function(dataType, fn) Mock.tooltipCalls[dataType] = fn end,
 }
 
-function Mock.ShowItemTooltip(itemID)
+-- lines: optional tooltip data lines, e.g. { { type = 11 } } for the game's own sell price
+function Mock.ShowItemTooltip(itemID, lines)
     GameTooltip:ClearLines()
     local fn = Mock.tooltipCalls[Enum.TooltipDataType.Item]
     function GameTooltip:GetItem() return "x", "|Hitem:" .. itemID .. "|h[x]|h", itemID end
-    fn(GameTooltip, { id = itemID })
+    fn(GameTooltip, { id = itemID, lines = lines })
     return GameTooltip.lines
 end
 

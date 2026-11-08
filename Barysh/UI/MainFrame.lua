@@ -179,6 +179,41 @@ function UI.Show(tabId)
 end
 
 -- Docks the window next to a game window (mailbox) and opens a tab; HideNear closes it again.
+-- Other addons dock their own panels to the right of the same game window (Mastercraft's mail helper):
+-- Barysh goes to the right of the rightmost of them instead of on top.
+local function dockTarget(f, anchor)
+    local target, edge = anchor, anchor.GetRight and anchor:GetRight()
+    if not edge or not UIParent or not UIParent.GetChildren then return anchor end
+    local start = edge
+    for _, c in ipairs({ UIParent:GetChildren() }) do
+        if c ~= f and c.IsShown and c:IsShown() and c.GetNumPoints then
+            for i = 1, c:GetNumPoints() do
+                local _, rel = c:GetPoint(i)
+                if rel == anchor then
+                    local left, right = c:GetLeft(), c:GetRight()
+                    if left and right and left >= start - 2 and right > edge then target, edge = c, right end
+                    break
+                end
+            end
+        end
+    end
+    return target
+end
+
+local function dock(f, anchor)
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", dockTarget(f, anchor), "TOPRIGHT", 4, 0)
+end
+
+-- Their panels may appear a moment after the game window: look again shortly after.
+local function redockSoon(f, anchor)
+    C_Timer.After(0.3, function()
+        if f:IsShown() and (f.dockedTo == anchor or (anchor == AuctionHouseFrame and f.dockedOpen)) then
+            ns.Safe(dock, f, anchor)
+        end
+    end)
+end
+
 function UI.ShowNear(anchor, tabId)
     if not anchor then return end
     local f = UI.Frame()
@@ -186,10 +221,10 @@ function UI.ShowNear(anchor, tabId)
         if tabId then UI.SelectTab(tabId) end
         return
     end
-    f:ClearAllPoints()
-    f:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 4, 0)
+    dock(f, anchor)
     f.dockedTo = anchor
     UI.Show(tabId)
+    redockSoon(f, anchor)
 end
 
 function UI.HideNear(anchor)
@@ -204,11 +239,9 @@ end
 function UI.OnAuctionHouse(open)
     local f = UI.Frame()
     if open then
-        if AuctionHouseFrame then
-            f:ClearAllPoints()
-            f:SetPoint("TOPLEFT", AuctionHouseFrame, "TOPRIGHT", 4, 0)
-        end
+        if AuctionHouseFrame then dock(f, AuctionHouseFrame) end
         f:Show()
+        if AuctionHouseFrame then redockSoon(f, AuctionHouseFrame) end
     elseif not open and f.dockedOpen then
         f:Hide()
     end

@@ -347,3 +347,109 @@ def test_slash_commands_do_not_error(game):
     for cmd in ("modules", "module Deals off", "module Deals on", "errors", "scan", "quick", "de", "de show", "nonsense"):
         game.g.SlashCmdList.BARYSH(cmd)
     assert game.errors() == []
+
+
+# Compatibility with other tooltip addons ----------------------------------------------------------
+
+def fake_other_addons(game):
+    run(game, """
+        WowMock.loadedAddOns = { Mastercraft = true, Auctionator = true, Bagnon = true }
+        MastercraftDB = { settings = { lootTooltip = true, tipPrice = true, tipDisenchant = true,
+            tipCrafted = true, ownedTooltip = true } }
+        AUCTIONATOR_CONFIG = { vendor_tooltips = true, auction_tooltips = true, shift_stack_tooltips = true }
+        Auctionator = { Config = {
+            Options = { VENDOR_TOOLTIPS = "vendor_tooltips", AUCTION_TOOLTIPS = "auction_tooltips" },
+            Get = function(name) return AUCTIONATOR_CONFIG[name] end,
+            Set = function(name, v) AUCTIONATOR_CONFIG[name] = v end,
+        } }
+        Bagnon_Sets = {}
+    """)
+
+
+def test_compat_waits_for_own_prices(game):
+    fake_other_addons(game)
+    game.mock.Advance(6)
+    assert game.g.MastercraftDB.settings.tipPrice is True
+    assert game.g.AUCTIONATOR_CONFIG.auction_tooltips is True
+
+
+def test_compat_turns_off_duplicates_and_restores(game):
+    fake_other_addons(game)
+    open_ah(game)
+    set_replicate(game, MARKET)
+    full_scan(game)
+    game.fire("AUCTION_HOUSE_CLOSED")
+    mc = game.g.MastercraftDB.settings
+    assert mc.lootTooltip is False and mc.tipPrice is False and mc.tipDisenchant is False
+    # Mastercraft's own lines stay
+    assert mc.tipCrafted is True and mc.ownedTooltip is True
+    cfg = game.g.AUCTIONATOR_CONFIG
+    assert cfg.auction_tooltips is False and cfg.vendor_tooltips is False and cfg.shift_stack_tooltips is True
+    assert game.g.Bagnon_Sets.countItems is False
+    assert any("Mastercraft" in line for line in to_py(game.mock.printed))
+
+    game.ns.SetModuleEnabled("Compat", False)
+    assert mc.lootTooltip is True and mc.tipPrice is True and mc.tipDisenchant is True
+    assert cfg.auction_tooltips is True and cfg.vendor_tooltips is True
+    assert game.g.Bagnon_Sets.countItems is True
+    assert game.errors() == []
+
+
+def test_compat_skips_missing_addons(game):
+    open_ah(game)
+    set_replicate(game, MARKET)
+    full_scan(game)
+    game.fire("AUCTION_HOUSE_CLOSED")
+    game.mock.Advance(6)
+    assert game.errors() == []
+
+
+def test_compat_keeps_bagnon_counts_when_mastercraft_hides_its_own(game):
+    fake_other_addons(game)
+    run(game, "MastercraftDB.settings.ownedTooltip = false")
+    open_ah(game)
+    set_replicate(game, MARKET)
+    full_scan(game)
+    game.fire("AUCTION_HOUSE_CLOSED")
+    assert game.g.Bagnon_Sets.countItems is None
+
+
+def test_tooltip_vendor_price_only_when_game_lacks_it(game):
+    text = "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES, game.to_lua([{"type": 1}]))))
+    assert "Торговцу | 300c" in text
+    text = "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES, game.to_lua([{"type": 11}]))))
+    assert "Торговцу" not in text
+    text = "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES)))
+    assert "Торговцу" not in text
+
+
+def test_disenchant_recorded_from_chat_when_auto_loot_took_slots(game):
+    open_ah(game)
+    set_replicate(game, MARKET)
+    full_scan(game)
+    run(game, f"WowMock.bags[0][1] = {{ itemID = {GLOVES} }}")
+    de = game.ns.Disenchanter
+    game.ns.settings.disenchant.skipBetterToSell = False
+    de.Update()
+    b = game.g.BaryshDisenchantButton
+    game.ns.CostBasis.Add(game.g.BaryshDB.books, GLOVES, 1, 3000)
+    b.Click(b)
+    game.fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 13262)
+    run(game, "WowMock.loot = {}")
+    game.fire("LOOT_READY")
+    game.fire("CHAT_MSG_LOOT", f"You receive loot: |cffffffff|Hitem:{DUST}::::::::|h[Strange Dust]|h|rx3.")
+    game.fire("CHAT_MSG_LOOT", f"You receive loot: |cff1eff00|Hitem:{ESSENCE}::::::::|h[Lesser Astral Essence]|h|r.")
+    game.mock.Advance(2)
+    ops = to_py(game.g.BaryshDB.ledger.ops)
+    assert ops[-1]["kind"] == "disenchant" and ops[-1]["note"] == "2 outputs"
+    # chat lines after the wait are not a disenchant
+    game.fire("CHAT_MSG_LOOT", f"You receive loot: |cffffffff|Hitem:{DUST}::::::::|h[Strange Dust]|h|r.")
+    assert len(to_py(game.g.BaryshDB.ledger.ops)) == len(ops)
+    assert game.errors() == []
+
+
+def test_parse_loot_message(game):
+    parse = game.ns.Disenchanter.ParseLootMessage
+    assert parse(f"You receive loot: |Hitem:{DUST}|h[x]|hx12.") == (DUST, 12)
+    assert parse(f"You receive loot: |Hitem:{DUST}|h[x]|h.") == (DUST, 1)
+    assert parse("Someone receives loot: x.") is None

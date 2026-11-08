@@ -72,6 +72,50 @@ end
 
 -- Ledger: what the last disenchant gave ---------------------------------------------------
 
+local function output(itemID, qty)
+    return { itemID = itemID, qty = qty or 1, value = (ns.Prices.Value(itemID) or 0) * (qty or 1) }
+end
+
+local function record(cast, outputs)
+    if #outputs == 0 then return end
+    local cost = CostBasis.Transfer(ns.db.books, cast.itemID, 1, outputs)
+    local value = 0
+    for _, o in ipairs(outputs) do value = value + o.value end
+    ns.Record({ kind = "disenchant", itemID = cast.itemID, qty = 1, amount = 0, profit = value - cost,
+        note = (#outputs) .. " outputs" })
+end
+
+-- Auto-loot addons (SpeedyAutoLoot) may take the slots before Barysh reads them. Then the outputs come
+-- from the "You receive loot" chat lines of the next moment.
+local CHAT_WAIT = 1.5
+
+local function chatPattern(fmt)
+    if type(fmt) ~= "string" then return nil end
+    local p = fmt:gsub("([%%%(%)%.%[%]%*%+%-%?%^%$])", "%%%1")
+    p = p:gsub("%%%%s", "(.+)"):gsub("%%%%d", "(%%d+)")
+    return "^" .. p .. "$"
+end
+
+function M.ParseLootMessage(msg)
+    local multi = chatPattern(LOOT_ITEM_SELF_MULTIPLE)
+    if multi then
+        local link, qty = msg:match(multi)
+        if link then return Items.ID(link), tonumber(qty) end
+    end
+    local single = chatPattern(LOOT_ITEM_SELF)
+    if single then
+        local link = msg:match(single)
+        if link then return Items.ID(link), 1 end
+    end
+end
+
+local function onChatLoot(msg)
+    local p = M.pendingChat
+    if not p or GetTime() - p.t > CHAT_WAIT or type(msg) ~= "string" then return end
+    local itemID, qty = M.ParseLootMessage(msg)
+    if itemID then p.outputs[#p.outputs + 1] = output(itemID, qty) end
+end
+
 local function onLoot()
     local cast = M.casting
     -- Only loot right after a disenchant that really went through.
@@ -82,16 +126,16 @@ local function onLoot()
         local link = GetLootSlotLink(i)
         local _, _, qty = GetLootSlotInfo(i)
         local itemID = Items.ID(link)
-        if itemID then
-            outputs[#outputs + 1] = { itemID = itemID, qty = qty or 1, value = (ns.Prices.Value(itemID) or 0) * (qty or 1) }
-        end
+        if itemID then outputs[#outputs + 1] = output(itemID, qty) end
     end
-    if #outputs == 0 then return end
-    local cost = CostBasis.Transfer(ns.db.books, cast.itemID, 1, outputs)
-    local value = 0
-    for _, o in ipairs(outputs) do value = value + o.value end
-    ns.Record({ kind = "disenchant", itemID = cast.itemID, qty = 1, amount = 0, profit = value - cost,
-        note = (#outputs) .. " outputs" })
+    if #outputs > 0 then return record(cast, outputs) end
+    local pending = { cast = cast, t = GetTime(), outputs = {} }
+    M.pendingChat = pending
+    C_Timer.After(CHAT_WAIT, function()
+        if M.pendingChat ~= pending then return end
+        M.pendingChat = nil
+        ns.Safe(record, pending.cast, pending.outputs)
+    end)
 end
 
 -- Button --------------------------------------------------------------------------------
@@ -189,6 +233,7 @@ function M:OnEnable()
         if unit == "player" and spellID == M.SPELL_ID then M.casting = nil end
     end)
     self:RegisterEvent("LOOT_READY", function() ns.Safe(onLoot) end)
+    self:RegisterEvent("CHAT_MSG_LOOT", function(_, _, msg) ns.Safe(onChatLoot, msg) end)
 end
 
 function M:OnDisable()

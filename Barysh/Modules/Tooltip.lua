@@ -48,14 +48,35 @@ local function perDayText(s)
     return ("~%.1f"):format(s.perDay)
 end
 
-function M.AddLines(tooltip, itemID, link)
+-- The game shows the vendor price itself on most clients. Without a SellPrice line in the tooltip data
+-- (VERIFY: Forever tooltips) Barysh adds it, since Auctionator's and Mastercraft's vendor lines are off
+-- (Modules/Compat.lua). Unknown data shape: assume the game shows it.
+local function gameShowsSellPrice(data)
+    local types = Enum and Enum.TooltipDataLineType
+    local sellType = types and types.SellPrice
+    if not sellType or type(data) ~= "table" or type(data.lines) ~= "table" then return true end
+    for _, line in ipairs(data.lines) do
+        if type(line) == "table" and line.type == sellType then return true end
+    end
+    return false
+end
+M.GameShowsSellPrice = gameShowsSellPrice
+
+function M.AddLines(tooltip, itemID, link, data)
     local key = ns.Prices.DefaultKey()
     local s = ns.Prices.Item(itemID, key)
     local de, breakdown = ns.DisenchantValue(link or itemID, key)
     local avgCost = ns.CostBasis.Average(ns.db.books, itemID)
-    if not s.current and not s.market and not de and not avgCost then return end
+    local vendor
+    if not gameShowsSellPrice(data) then
+        local info = Items.Info(itemID)
+        if info and info.sellPrice and info.sellPrice > 0 then vendor = info.sellPrice end
+    end
+    if not s.current and not s.market and not de and not avgCost and not vendor then return end
 
     tooltip:AddLine(GOLD_TEXT .. "Barysh|r")
+    if vendor then tooltip:AddDoubleLine(L.TT_VENDOR, money(vendor), 1, 0.82, 0, 1, 1, 1) end
+    if not s.current and not s.market and not de and not avgCost then return end
     local houseName = AH.IsNeutralKey(key) and L.TT_AH_NEUTRAL or L.TT_AH
     if s.current then tooltip:AddDoubleLine(houseName, money(s.current), 1, 0.82, 0, 1, 1, 1) end
     if s.market then
@@ -107,7 +128,7 @@ local function onItemTooltip(tooltip, data)
     local itemID = data and data.id
     if not itemID or (issecretvalue and issecretvalue(itemID)) then return end
     local _, link = tooltip:GetItem()
-    ns.Safe(M.AddLines, tooltip, itemID, link)
+    ns.Safe(M.AddLines, tooltip, itemID, link, data)
 end
 
 local hooked = false
