@@ -126,3 +126,11 @@ def test_lots_for_one_material_cheapest_material_first(logic):
     assert rows[1]["qty"] == 2 and rows[1]["yield"] == pytest.approx(7.5) and rows[1]["profit"] == 3500
     # material price unknown: no saving
     assert "profit" not in to_py(D.ForMaterial(cands, STRANGE_DUST, None))[0]
+
+
+def test_enchanter_wands_never_disenchant(logic):
+    D = logic.ns.Disenchant
+    assert D.IsDisenchantable(WEAPON, GREEN, 5000)
+    assert not D.IsDisenchantable(WEAPON, GREEN, 11287)  # Lesser Magic Wand
+    assert not logic.ns.DisenchantPick.IsCandidate(
+        logic.to_lua({"itemID": 11288, "classID": WEAPON, "quality": GREEN, "ilvl": 20}), logic.to_lua({"quality": "green"}))

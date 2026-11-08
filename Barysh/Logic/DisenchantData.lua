@@ -18,6 +18,14 @@ local M = {
 
 ns.DisenchantData = {
     materials = M,
+    -- Weapons and armour that cannot be disenchanted although their class and quality could:
+    -- the enchanter's own wands (made by Enchanting).
+    never = {
+        [11287] = true, -- Lesser Magic Wand
+        [11288] = true, -- Greater Magic Wand
+        [11289] = true, -- Lesser Mystic Wand
+        [11290] = true, -- Greater Mystic Wand
+    },
     -- Materials in the order the picker shows them: dust, essences, shards, crystal.
     order = {
         M.STRANGE_DUST, M.SOUL_DUST, M.VISION_DUST, M.DREAM_DUST, M.ILLUSION_DUST,

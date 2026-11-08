@@ -225,27 +225,38 @@ UI.RegisterTab({
         c.mats:SetData(mats)
 
         local matPrice = D.MaterialPrice(target, key)
-        local rows, loading = D.ForMaterial(target, key)
+        local rows, loading, busy = D.ForMaterial(target, key)
         local data = {}
         for _, r in ipairs(rows) do
             if not r.bought then
-                local info = Items.Info(r.itemID)
-                r.cols = {
-                    itemName(r.itemID, r.qty > 1 and (" ×" .. r.qty) or ""), money(r.cost), yieldText(r.yield),
-                    UI.Colorize(money(math.max(0, r.perUnit)), matPrice and r.perUnit < matPrice and "profit" or "muted"),
-                    r.profit and profitText(r.profit) or "—",
-                }
-                r.sub = info and L.DET_SUB:format(info.ilvl or 0) or ""
+                if not r.cols then
+                    local info = Items.Info(r.itemID)
+                    r.cols = {
+                        itemName(r.itemID, r.qty > 1 and (" ×" .. r.qty) or ""), money(r.cost), yieldText(r.yield),
+                        UI.Colorize(money(math.max(0, r.perUnit)), matPrice and r.perUnit < matPrice and "profit" or "muted"),
+                        r.profit and profitText(r.profit) or "—",
+                    }
+                    r.sub = info and L.DET_SUB:format(info.ilvl or 0) or ""
+                end
                 data[#data + 1] = r
             end
         end
+        -- Same list as a second ago: leave the table alone (it keeps its scroll position too).
+        local same = c.rows and #c.rows == #data
+        if same then
+            for i = 1, #data do
+                if c.rows[i] ~= data[i] then same = false break end
+            end
+        end
         c.rows = data
-        c.list:SetData(data)
+        if same then c.list:Render() else c.list:SetData(data) end
 
         local name = Items.ColoredName(target)
         local h = ns.db.ah[key]
         if not h or not h.lastAny then
             c.foot.text:SetText(L.DEALS_NEED_SCAN)
+        elseif busy then
+            c.foot.text:SetText(L.DEALS_COMPUTING)
         elseif #data == 0 then
             c.foot.text:SetText(L.DET_NONE:format(name))
         else

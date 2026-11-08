@@ -16,7 +16,7 @@ ns.DisenchantPick = DisenchantPick
 -- }
 function DisenchantPick.IsCandidate(item, rules)
     if item.locked or item.inSet then return false end
-    if not Disenchant.IsDisenchantable(item.classID, item.quality) then return false end
+    if not Disenchant.IsDisenchantable(item.classID, item.quality, item.itemID) then return false end
     local maxQuality = rules.quality == "greenblue" and Disenchant.QUALITY_RARE or Disenchant.QUALITY_UNCOMMON
     if item.quality > maxQuality then return false end
     if rules.exclude and rules.exclude[item.itemID] then return false end

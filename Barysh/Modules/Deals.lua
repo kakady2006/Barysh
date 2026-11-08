@@ -56,7 +56,7 @@ function M.ItemData(key, itemID, lots, ctx)
         vendor = info and info.sellPrice or 0,
         deposit = AH.DepositEstimate(info and info.sellPrice, key),
     }
-    if info and Disenchant.IsDisenchantable(info.classID, info.quality) then
+    if info and Disenchant.IsDisenchantable(info.classID, info.quality, itemID) then
         it.de = ns.DisenchantValue(itemID, key)
     end
     local entry = ns.ItemLists.Entry("stock", itemID)
@@ -140,46 +140,80 @@ function M.MaterialPrice(materialID, key)
     return s.current or s.market
 end
 
+M.MAT_PER_STEP = 200
+
+local function matCandidate(id, packed, materialID, key, cut)
+    -- Class first: most of the auction is not gear, and asking for full data of every item
+    -- floods the client with item requests.
+    if not Disenchant.IsGearClass(Items.ClassOf(id)) then return nil end
+    local info = Items.Info(id)
+    if not info then return "loading" end
+    if not Disenchant.IsDisenchantable(info.classID, info.quality, id) then return nil end
+    local outcomes = Disenchant.Outcomes(info.classID, info.quality, info.ilvl)
+    if Disenchant.Yield(outcomes, materialID) <= 0 then return nil end
+    local other = {}
+    for _, o in ipairs(outcomes) do
+        if o.itemID ~= materialID then other[#other + 1] = o end
+    end
+    local ov = Disenchant.Value(other, function(mid) return ns.Prices.Value(mid, key) end) or 0
+    return { itemID = id, outcomes = outcomes, lots = Lots.Decode(packed), other = ns.Money.AfterCut(ov, cut) }
+end
+
+-- Lots for one material. Returns rows, items still loading, busy. The first call for a material
+-- (or after a scan) starts a background job and returns busy; the result is kept until the
+-- material, the house or the scan changes, or force (Recalc).
 function M.ForMaterial(materialID, key, force)
     key = key or ns.Prices.DefaultKey()
     local h = ns.db.ah[key]
-    if not h or not materialID then return {}, 0 end
+    if not h or not materialID then return {}, 0, false end
     local c = M.matCache
-    if not force and c and c.materialID == materialID and c.key == key and c.snap == h.snap
-        and c.lastAny == h.lastAny then
-        return c.rows, c.loading
+    local fresh = c and c.materialID == materialID and c.key == key and c.snap == h.snap and c.lastAny == h.lastAny
+    if fresh and not force then return c.rows, c.loading, false end
+    local job = M.matJob
+    if job and not force and job.materialID == materialID and job.key == key and job.snap == h.snap
+        and job.lastAny == h.lastAny then
+        return {}, 0, true
     end
+    if job then Jobs.Cancel(job.handle) end
+
     local cut = AH.Cut(key)
     local noBuy = ns.settings.lists.noBuy.items
-    local candidates, loading = {}, 0
-    for id, packed in pairs(h.snap) do
-        if not noBuy[id] then
-            local info = Items.Info(id)
-            if not info then
-                loading = loading + 1
-            elseif Disenchant.IsDisenchantable(info.classID, info.quality) then
-                local outcomes = Disenchant.Outcomes(info.classID, info.quality, info.ilvl)
-                if Disenchant.Yield(outcomes, materialID) > 0 then
-                    local other = {}
-                    for _, o in ipairs(outcomes) do
-                        if o.itemID ~= materialID then other[#other + 1] = o end
-                    end
-                    local ov = Disenchant.Value(other, function(mid) return ns.Prices.Value(mid, key) end) or 0
-                    candidates[#candidates + 1] = {
-                        itemID = id, outcomes = outcomes, lots = Lots.Decode(packed), other = ns.Money.AfterCut(ov, cut),
-                    }
+    local ids = {}
+    for id in pairs(h.snap) do
+        if not noBuy[id] then ids[#ids + 1] = id end
+    end
+    local candidates, loading, i = {}, 0, 0
+    job = { materialID = materialID, key = key, snap = h.snap, lastAny = h.lastAny }
+    M.matJob = job
+    job.handle = Jobs.Run("dematerial", function()
+        local stop = math.min(#ids, i + M.MAT_PER_STEP)
+        for k = i + 1, stop do
+            local id = ids[k]
+            local packed = h.snap[id]
+            if packed then
+                local cand = matCandidate(id, packed, materialID, key, cut)
+                if cand == "loading" then
+                    loading = loading + 1
+                elseif cand then
+                    candidates[#candidates + 1] = cand
                 end
             end
         end
-    end
-    local rows = Disenchant.ForMaterial(candidates, materialID, M.MaterialPrice(materialID, key))
-    for _, r in ipairs(rows) do
-        r.type, r.commodity, r.key = "disenchant", false, key
-    end
-    M.key = M.key or key
-    M.matCache = { materialID = materialID, key = key, snap = h.snap, lastAny = h.lastAny,
-        rows = rows, loading = loading }
-    return rows, loading
+        i = stop
+        return i >= #ids
+    end, function(ok)
+        if M.matJob == job then M.matJob = nil end
+        if not ok then return end
+        local rows = Disenchant.ForMaterial(candidates, materialID, M.MaterialPrice(materialID, key))
+        for _, r in ipairs(rows) do
+            r.type, r.commodity, r.key = "disenchant", false, key
+        end
+        M.key = M.key or key
+        M.matCache = { materialID = materialID, key = key, snap = job.snap, lastAny = job.lastAny,
+            rows = rows, loading = loading }
+        if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+    end)
+    return {}, 0, true
 end
 
 -- Alerts ------------------------------------------------------------------------------------

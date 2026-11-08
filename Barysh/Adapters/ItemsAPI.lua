@@ -19,6 +19,12 @@ function Items.Info(item)
     }
 end
 
+-- Class and subclass without the full item data (no request to the server).
+function Items.ClassOf(item)
+    local _, _, _, _, _, classID, subclassID = GetInstant(item)
+    return classID, subclassID
+end
+
 function Items.ID(item)
     if type(item) == "number" then return item end
     if type(item) == "string" then

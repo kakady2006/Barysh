@@ -442,16 +442,26 @@ def test_disenchant_button_moves_with_shift_only(game):
     assert game.errors() == []
 
 
+def for_material(game, material):
+    D = game.ns.DealsModule
+    rows, _, busy = D.ForMaterial(material)
+    if busy:
+        game.mock.RunFrames(20)
+        rows, _, busy = D.ForMaterial(material)
+    assert not busy
+    return to_py(rows)
+
+
 def test_lots_for_a_chosen_material(game):
     open_ah(game)
     set_replicate(game, MARKET)
     full_scan(game)
-    D = game.ns.DealsModule
-    rows = to_py(D.ForMaterial(DUST)[0])
+    game.ns.Prices.Invalidate()
+    rows = for_material(game, DUST)
     assert [r["itemID"] for r in rows] == [GLOVES]
     assert rows[0]["yield"] == 3.75 and rows[0]["type"] == "disenchant"
-    assert to_py(D.ForMaterial(SHARD)[0])[0]["itemID"] == GLOVES
-    assert not to_py(D.ForMaterial(11176)[0])  # Dream Dust: nothing on this auction
+    assert for_material(game, SHARD)[0]["itemID"] == GLOVES
+    assert not for_material(game, 11176)  # Dream Dust: nothing on this auction
     ui = game.ns.UI
     ui.Show()
     ui.SelectTab("detarget")

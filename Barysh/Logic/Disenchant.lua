@@ -11,9 +11,16 @@ Disenchant.QUALITY_UNCOMMON = 2
 Disenchant.QUALITY_RARE = 3
 Disenchant.QUALITY_EPIC = 4
 
-function Disenchant.IsDisenchantable(classID, quality)
+-- itemID is optional: with it, the items that never disenchant (DisenchantData.never) are excluded.
+function Disenchant.IsDisenchantable(classID, quality, itemID)
+    if itemID and Data.never[itemID] then return false end
     return (classID == Disenchant.CLASS_WEAPON or classID == Disenchant.CLASS_ARMOR)
-        and quality >= Disenchant.QUALITY_UNCOMMON and quality <= Disenchant.QUALITY_EPIC
+        and quality ~= nil and quality >= Disenchant.QUALITY_UNCOMMON and quality <= Disenchant.QUALITY_EPIC
+end
+
+-- Weapon or armour by class alone (a cheap first filter before the full item data).
+function Disenchant.IsGearClass(classID)
+    return classID == Disenchant.CLASS_WEAPON or classID == Disenchant.CLASS_ARMOR
 end
 
 local function findRow(rows, ilvl)

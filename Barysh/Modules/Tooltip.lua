@@ -16,6 +16,7 @@ local money = function(c) return ns.FormatMoney(c) end
 function ns.DisenchantValue(item, key)
     local info = Items.Info(item)
     if not info then return nil end
+    if not Disenchant.IsDisenchantable(info.classID, info.quality, Items.ID(item)) then return nil end
     local ilvl = type(item) == "string" and Items.Level(item) or info.ilvl
     local outcomes = Disenchant.Outcomes(info.classID, info.quality, ilvl)
     if not outcomes then return nil end
