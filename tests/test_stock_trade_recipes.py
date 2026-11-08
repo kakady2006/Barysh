@@ -1,4 +1,4 @@
-"""Stock and capital, trade recognition, recipes, market numbers."""
+"""Stock and capital, recipes, market numbers."""
 
 import pytest
 
@@ -34,59 +34,6 @@ def test_capital(logic):
     assert c["total"] == 2000
     assert c["perChar"] == {"A-R": 1450, "B-R": 550}
     assert logic.ns.Stock.Held(chars, 1) == 15
-
-
-def trade(logic, **kw):
-    t = {"gave": {"items": [], "money": 0}, "got": {"items": [], "money": 0}, "guild": False}
-    t.update(kw)
-    return logic.to_lua(t)
-
-
-def items(*ids):
-    return [{"itemID": i, "qty": 1} for i in ids]
-
-
-@pytest.mark.parametrize("kw, kind, auto", [
-    ({"enchant": "Enchant Bracer - Stamina", "got": {"items": [], "money": 5000}}, "service", True),
-    ({"gave": {"items": items(7), "money": 0}, "got": {"items": [], "money": 900}, "order": True}, "craft", True),
-    ({"gave": {"items": items(7), "money": 0}, "got": {"items": [], "money": 900}}, "trade_sell", True),
-    ({"gave": {"items": items(7), "money": 0}, "got": {"items": [], "money": 900}, "crafted": {7: True}}, "unclear", False),
-    ({"gave": {"items": [], "money": 900}, "got": {"items": items(7), "money": 0}}, "trade_buy", True),
-    ({"got": {"items": [], "money": 900}}, "money_in", False),
-    ({"got": {"items": items(1, 2), "money": 0}}, "reagents_in", True),
-    ({"gave": {"items": items(1), "money": 0}, "got": {"items": items(2), "money": 0}}, "unclear", False),
-    ({"own": True, "got": {"items": [], "money": 900}}, "transfer", True),
-    ({}, "ignore", True),
-])
-def test_trade_classify(logic, kw, kind, auto):
-    r = to_py(logic.ns.TradeLogic.Classify(trade(logic, **kw)))
-    assert r["kind"] == kind and r["auto"] == auto
-
-
-def test_stranger_gold_warning(logic):
-    r = to_py(logic.ns.TradeLogic.Classify(trade(logic, got={"items": [], "money": 900})))
-    assert r["warn"] == "stranger_gold" and r["options"] == ["service", "trade_sell", "ignore"]
-    r = to_py(logic.ns.TradeLogic.Classify(trade(logic, got={"items": [], "money": 900}, guild=True)))
-    assert "warn" not in r
-
-
-def test_own_reagents_and_prices(logic):
-    T = logic.ns.TradeLogic
-    need = logic.to_lua([{"itemID": 1, "qty": 4}, {"itemID": 2, "qty": 1}])
-    own = to_py(T.OwnReagents(need, logic.to_lua([{"itemID": 1, "qty": 3}])))
-    assert own == [{"itemID": 1, "qty": 1}, {"itemID": 2, "qty": 1}]
-    value = logic.lua.eval("function(id) return id * 100 end")
-    entry = logic.to_lua({"name": "Enchant Boots - Agility", "client": 2000, "reagents": [{"itemID": 1, "qty": 2}]})
-    assert T.ServicePrice(entry, False, value) == 2000
-    assert T.ServicePrice(entry, True, value) == 2200
-    assert T.CheckPayment(2200, 2000) == ("less", -200)
-    pl = logic.to_lua([entry])
-    assert T.FindService(pl, "Enchant Boots - Agility").client == 2000
-    assert T.FindService(pl, "Чары: Enchant Boots - Agility (3)").client == 2000
-    clients = logic.table()
-    for i in range(3):
-        T.AddOrder(clients, "Client", 100, i)
-    assert T.IsRegular(clients, "Client") and clients.Client.sum == 300
 
 
 @pytest.fixture

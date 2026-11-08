@@ -1,4 +1,4 @@
-"""Deals, selling, vendor, stock, import/export, trade, recipes, mail extras: whole-addon scenarios."""
+"""Deals, selling, vendor, stock, import/export, recipes, mail extras: whole-addon scenarios."""
 
 import pytest
 
@@ -331,55 +331,6 @@ def test_import_rejects_garbage(game):
     assert game.ns.ImportExport.Preview("hello") == (None, "format")
 
 
-def trade(game, player=(), target=(), player_money=0, target_money=0, enchant=None, partner="Client"):
-    def items(lst):
-        return "{" + ", ".join(f"{{ {i}, {c} }}" for i, c in lst) + "}"
-    run(game, f"""
-        WowMock.tradePartner = "{partner}"
-        WowMock.trade = {{ player = {items(player)}, target = {items(target)},
-            playerMoney = {player_money}, targetMoney = {target_money}, enchant = {('"' + enchant + '"') if enchant else 'nil'} }}
-    """)
-    game.fire("TRADE_SHOW")
-    game.fire("TRADE_ACCEPT_UPDATE", 1, 1)
-    game.fire("UI_INFO_MESSAGE", 0, "Trade complete.")
-    game.fire("TRADE_CLOSED")
-
-
-def test_trade_service_is_recorded(game):
-    game.ns.settings.trade.services = game.to_lua([{"name": "Enchant Bracer - Stamina", "client": 5000, "reagents": []}])
-    trade(game, target_money=5000, enchant="Enchant Bracer - Stamina")
-    op = to_py(game.g.BaryshDB.ledger.ops)[-1]
-    assert op["kind"] == "service" and op["amount"] == 5000
-    assert game.g.BaryshDB.clients.Client.orders == 1
-    assert game.errors() == []
-
-
-def test_trade_craft_order_uses_client_reagents(game):
-    run(game, f"""WowMock.recipes = {{ {{ recipeID = 2963, name = "Bolt of Linen Cloth", output = {BOLT}, difficulty = 1,
-        reagents = {{ {{ {LINEN}, 2 }} }} }} }}""")
-    game.fire("TRADE_SKILL_SHOW")
-    game.mock.Advance(1)
-    trade(game, target=[(LINEN, 2)])            # client brings reagents
-    assert to_py(game.g.BaryshDB.orders)["Client"] == [{"itemID": LINEN, "qty": 2}]
-    trade(game, player=[(BOLT, 1)], target_money=3000)
-    op = to_py(game.g.BaryshDB.ledger.ops)[-1]
-    assert op["kind"] == "craft" and op["amount"] == 3000 and op["profit"] == 3000
-    assert game.g.BaryshDB.orders.Client is None
-
-
-def test_trade_unclear_asks_and_fix_undoes(game):
-    trade(game, target_money=700)                # gold for nothing: ask
-    assert game.g.BaryshTradeAsk.shown
-    assert any("незнакомца" in line for line in game.mock.printed.values())
-    game.ns.TradeModule.Answer(game.g.BaryshTradeAsk.trade, "service")
-    assert to_py(game.g.BaryshDB.ledger.ops)[-1]["kind"] == "service"
-    n = len(game.g.BaryshDB.ledger.ops)
-    trade(game, player=[(BOLT, 1)], target_money=900)   # sale, recorded automatically
-    assert len(game.g.BaryshDB.ledger.ops) == n + 1
-    game.ns.TradeModule.Fix()
-    assert len(game.g.BaryshDB.ledger.ops) == n
-
-
 def test_recipes_panel_plan_and_shopping(game):
     synced(game, {LINEN: (100, 50.0, 40), BOLT: (600, 10.0, 40)})
     run(game, f"""WowMock.recipes = {{ {{ recipeID = 2963, name = "Bolt of Linen Cloth", output = {BOLT}, difficulty = 0,
@@ -490,7 +441,6 @@ def test_every_tab_and_settings_group_render(game):
         b.Click(b)
         game.mock.RunFrames(2)
     ui.ImportDialog()
-    ui.EditPriceList()
     assert game.errors() == []
 
 

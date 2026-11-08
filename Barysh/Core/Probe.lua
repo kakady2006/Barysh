@@ -18,7 +18,7 @@ local AH_FUNCS = {
 
 local GLOBAL_FUNCS = {
     "GetInboxInvoiceInfo", "TakeInboxMoney", "TakeInboxItem", "AutoLootMailItem", "ReturnInboxItem",
-    "GetItemInfo", "GetCoinTextureString", "issecretvalue", "GetTradePlayerItemInfo", "GetTradeTargetItemInfo",
+    "GetItemInfo", "GetCoinTextureString", "issecretvalue",
 }
 
 local NAMESPACES = {

@@ -13,7 +13,7 @@ local WIDTH, HEIGHT = 660, 540
 local GROUP_KEYS = {
     core = { "scan", "tooltip", "summaryDays", "staleHours", "minimap" },
     trade = { "deals", "selling", "vendor", "market" },
-    craft = { "disenchant", "recipes", "trade" },
+    craft = { "disenchant", "recipes" },
     money = { "mail" },
     service = {},
 }
@@ -223,31 +223,6 @@ function build.craft(l)
     l:Header(L.MODULE_Recipes)
     l:Module("Recipes")
     l:Check(L.SET_RECIPES_SHOWN, { "recipes", "shown" }, nil, moduleOn("Recipes"))
-    l:Header(L.MODULE_Trade)
-    l:Module("Trade")
-    l:Check(L.SET_TRADE_ASK, { "trade", "ask" }, nil, moduleOn("Trade"))
-    l:Button(L.BTN_PRICE_LIST, function() UI.EditPriceList() end, L.TIP_PRICE_LIST)
-    l:Header(L.CLIENTS_TITLE)
-    local clients = UI.Lines((function()
-        local f = CreateFrame("Frame", nil, l.parent)
-        l:Add(f, 10 * 16 + 4, 8)
-        f:SetSize(440, 10 * 16)
-        return f
-    end)(), 10, 440)
-    l.items[#l.items + 1] = { Update = function()
-        local list = {}
-        for name, c in pairs(ns.db.clients) do list[#list + 1] = { name = name, c = c } end
-        table.sort(list, function(a, b) return (a.c.last or 0) > (b.c.last or 0) end)
-        local texts = {}
-        for i, e in ipairs(list) do
-            if i > #clients then break end
-            local regular = ns.TradeLogic.IsRegular(ns.db.clients, e.name) and (" · " .. L.TRADE_REGULAR) or ""
-            texts[i] = L.CLIENT_LINE:format(e.name, e.c.orders, ns.FormatMoney(e.c.sum),
-                e.c.last and date("%d.%m", e.c.last) or "—") .. regular
-        end
-        if #texts == 0 then texts[1] = UI.Colorize(L.CLIENTS_NONE, "muted") end
-        UI.SetLines(clients, texts)
-    end }
 end
 
 function build.money(l)
@@ -386,35 +361,6 @@ function UI.BuildListsEditor(l, fixed)
         note:SetShown(stock)
     end }
     l.items[#l.items + 1] = editor
-end
-
--- Price list for services: one line per service "Name; price with client's reagents; price with own (or empty = auto)".
-function UI.EditPriceList()
-    local lines = {}
-    for _, e in ipairs(ns.settings.trade.services) do
-        lines[#lines + 1] = ("%s; %s; %s"):format(e.name, e.client and ("%g"):format(e.client / 10000) or "",
-            e.own and ("%g"):format(e.own / 10000) or "")
-    end
-    UI.AskText(L.PRICE_LIST_TITLE, L.PRICE_LIST_HINT, L.BTN_SAVE_LIST, function(text, w)
-        local list = {}
-        for line in (text .. "\n"):gmatch("([^\n]*)\n") do
-            local name, client, own = line:match("^%s*([^;]+);%s*([^;]*);?%s*([^;]*)")
-            if name and name:match("%S") then
-                list[#list + 1] = {
-                    name = name:gsub("%s+$", ""), client = UI.ParseMoney(client), own = UI.ParseMoney(own), reagents = {},
-                }
-            end
-        end
-        -- Keep reagents known for services with the same name.
-        for _, e in ipairs(list) do
-            for _, old in ipairs(ns.settings.trade.services) do
-                if old.name == e.name then e.reagents = old.reagents or {} end
-            end
-        end
-        ns.settings.trade.services = list
-        w.result:SetText(L.PRICE_LIST_SAVED:format(#list))
-    end)
-    UI.TextWindow().edit:SetText(table.concat(lines, "\n"))
 end
 
 -- Import dialog: paste → preview of what changes → apply.

@@ -38,10 +38,6 @@ ns.defaults = {
     mail = {
         strangerWarn = true,
     },
-    trade = {
-        services = {},      -- price list: { {name, client, own, reagents = { {itemID, qty} }} }
-        ask = true,         -- the "What was it?" window for unclear trades
-    },
     recipes = {
         shown = true,
     },
@@ -85,8 +81,8 @@ local function initData(db)
     db.sellMarked = db.sellMarked or {} -- itemID -> true: put into the selling queue ("Exit", "To selling")
     db.stockBelow = db.stockBelow or {} -- itemID -> first day below cost
     db.playtime = db.playtime or {}   -- day -> seconds online
-    db.clients = db.clients or {}     -- trade clients, local only
-    db.orders = db.orders or {}       -- client name -> reagents handed over for a craft
+    -- Trade window tracking (clients, orders, service price list) was removed: drop what older versions kept.
+    db.clients, db.orders = nil, nil
     db.recipes = db.recipes or {}     -- character -> recipeID -> recipe (for raw materials deals)
     db.exportRequests = db.exportRequests or {} -- "Export for analysis" requests for BaryshSync
 end
@@ -134,6 +130,8 @@ function ns.InitDB()
     migrateLists(cdb.profile)
     migrateVendor(db.profile)
     migrateVendor(cdb.profile)
+    if type(db.profile) == "table" then db.profile.trade = nil end
+    if type(cdb.profile) == "table" then cdb.profile.trade = nil end
     db.profile = copyDefaults(ns.defaults, db.profile or {})
     cdb.profileMode = cdb.profileMode or "account"
     if cdb.profileMode == "char" then

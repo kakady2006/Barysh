@@ -7,7 +7,7 @@ ns.Ledger = Ledger
 
 Ledger.KINDS = {
     "ah_sell", "ah_buy", "ah_expired", "disenchant", "vendor_sell", "vendor_buy",
-    "craft", "cod", "trade_sell", "trade_buy", "service",
+    "craft", "cod",
 }
 
 function Ledger.New()

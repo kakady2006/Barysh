@@ -8,7 +8,7 @@ local money = ns.FormatMoney
 -- Ledger and Mail tabs. TZ: "Учёт и капитал", "Почта".
 
 local KIND_COLOR = { ah_sell = "profit", ah_buy = "text", ah_expired = "risk", disenchant = "gold",
-    vendor_sell = "profit", service = "profit", craft = "profit", trade_sell = "profit" }
+    vendor_sell = "profit", craft = "profit" }
 
 local PERIODS = { "today", "week", "month", "all" }
 

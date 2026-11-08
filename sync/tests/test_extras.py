@@ -171,8 +171,8 @@ def ledger_db():
     db.import_ledger(con, [
         {"id": 1, "t": 1_800_000_000, "kind": "ah_sell", "char": "Tester-Realm", "itemID": LINEN, "name": "Linen",
          "qty": 20, "amount": 9500, "profit": 3000},
-        {"id": 2, "t": 1_800_000_100, "kind": "service", "char": "Tester-Realm", "amount": 50000, "profit": 50000,
-         "note": "Enchant"},
+        {"id": 2, "t": 1_800_000_100, "kind": "craft", "char": "Tester-Realm", "amount": 50000, "profit": 50000,
+         "note": "Bolt"},
     ])
     db.save_capital(con, "2027-01-15", 1_800_000_000,
                     {"gold": 10000, "bags": 500, "bank": 0, "mail": 0, "auctions": 0, "total": 10500})

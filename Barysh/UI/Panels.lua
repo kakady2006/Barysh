@@ -5,8 +5,7 @@ local L = ns.L
 local Items = ns.Items
 local money = ns.FormatMoney
 
--- Panels next to game windows: profession (recipe profit) and trade; trade toast and question.
--- TZ: "Панели у окон игры: почты, профессии, обмена".
+-- Panels next to game windows: profession (recipe profit) and mailbox settings.
 
 local DIFFICULTY_COLOR = { [0] = "ff8040", [1] = "ffff00", [2] = "40bf40", [3] = "808080" }
 
@@ -105,119 +104,6 @@ function UI.RecipesPanel(show)
     if anchor then recipes:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 4, 0) else recipes:SetPoint("CENTER") end
     recipes:Show()
     ns.Safe(refreshRecipes)
-end
-
--- Trade -------------------------------------------------------------------------------------------
-
-local trade
-
-local function buildTrade()
-    local f = UI.Window("BaryshTrade", 260, 150)
-    f:SetFrameStrata("MEDIUM")
-    f.title = UI.Text(f, "GameFontNormal")
-    f.title:SetPoint("TOPLEFT", 14, -14)
-    local box = CreateFrame("Frame", nil, f)
-    box:SetPoint("TOPLEFT", 14, -34)
-    box:SetSize(232, 100)
-    f.lines = UI.Lines(box, 6, 232)
-    f:Hide()
-    return f
-end
-
--- Live panel while the trade window is open. t = described trade or nil to hide.
-function UI.TradePanel(t)
-    if not t then
-        if trade then trade:Hide() end
-        return
-    end
-    trade = trade or buildTrade()
-    trade:ClearAllPoints()
-    if TradeFrame then trade:SetPoint("TOPLEFT", TradeFrame, "TOPRIGHT", 4, 0) else trade:SetPoint("CENTER") end
-    local name = t.partner or "?"
-    local mark = ns.TradeModule.IsRegular(name) and (" · " .. UI.Colorize(L.TRADE_REGULAR, "profit")) or ""
-    trade.title:SetText(name .. mark)
-    local lines = {}
-    local expected = ns.TradeModule.Expected(t)
-    if t.enchant then lines[#lines + 1] = L.TRADE_ENCHANT:format(t.enchant) end
-    if expected then
-        local st, diff = ns.TradeLogic.CheckPayment(expected, t.got.money)
-        local color = st == "ok" and "profit" or (st == "less" and "loss" or "risk")
-        lines[#lines + 1] = L.TRADE_EXPECTED:format(money(expected))
-        lines[#lines + 1] = UI.Colorize(L["TRADE_PAY_" .. st]:format(money(math.abs(diff))), color)
-    end
-    if t.order then lines[#lines + 1] = L.TRADE_HAS_ORDER end
-    if t.got.money > 0 then lines[#lines + 1] = L.TRADE_GOT:format(money(t.got.money)) end
-    if t.gave.money > 0 then lines[#lines + 1] = L.TRADE_GAVE:format(money(t.gave.money)) end
-    if t.got.money > 0 and not t.guild and not t.own and not t.order and not t.enchant and #t.gave.items == 0 then
-        lines[#lines + 1] = UI.Colorize(L.TRADE_STRANGER_GOLD, "loss")
-    end
-    UI.SetLines(trade.lines, lines)
-    trade:Show()
-end
-
--- Toast after an automatically recorded trade, with "Fix".
-local toast
-
-function UI.TradeToast(t, kind)
-    if not toast then
-        toast = UI.Window("BaryshTradeToast", 300, 64)
-        toast:SetPoint("TOP", 0, -140)
-        toast.text = UI.Text(toast, "GameFontHighlightSmall")
-        toast.text:SetPoint("TOPLEFT", 14, -14)
-        toast.text:SetWidth(270)
-        toast.fix = UI.Button(toast, L.BTN_FIX, 90, function()
-            toast:Hide()
-            ns.TradeModule.Fix()
-        end)
-        toast.fix:SetPoint("BOTTOMRIGHT", -12, 10)
-    end
-    local amount = t.got.money > 0 and t.got.money or t.gave.money
-    toast.text:SetText(L.TRADE_RECORDED:format(L["KIND_" .. kind] or L["TRADEKIND_" .. kind] or kind, money(amount)))
-    toast:Show()
-    local shown = toast
-    C_Timer.After(15, function() if shown:IsShown() then shown:Hide() end end)
-end
-
--- "What was it?" with the options that fit the direction of the trade.
-local ask
-
-function UI.TradeAsk(t, options)
-    if not ask then
-        ask = UI.Window("BaryshTradeAsk", 320, 130)
-        ask:SetPoint("TOP", 0, -140)
-        ask:SetFrameStrata("DIALOG")
-        ask.title = UI.Text(ask, "GameFontNormal")
-        ask.title:SetPoint("TOPLEFT", 14, -14)
-        ask.title:SetText(L.TRADE_ASK_TITLE)
-        ask.text = UI.Text(ask, "GameFontHighlightSmall")
-        ask.text:SetPoint("TOPLEFT", 14, -34)
-        ask.text:SetWidth(290)
-        ask.buttons = {}
-    end
-    for _, b in ipairs(ask.buttons) do b:Hide() end
-    local parts = {}
-    if #t.gave.items > 0 then parts[#parts + 1] = L.TRADE_GAVE_ITEMS:format(#t.gave.items) end
-    if t.gave.money > 0 then parts[#parts + 1] = L.TRADE_GAVE:format(money(t.gave.money)) end
-    if #t.got.items > 0 then parts[#parts + 1] = L.TRADE_GOT_ITEMS:format(#t.got.items) end
-    if t.got.money > 0 then parts[#parts + 1] = L.TRADE_GOT:format(money(t.got.money)) end
-    ask.text:SetText((t.partner or "?") .. ": " .. table.concat(parts, ", "))
-    for i, opt in ipairs(options) do
-        local b = ask.buttons[i]
-        if not b then
-            b = UI.Button(ask, "", 96, function(self)
-                ask:Hide()
-                ns.TradeModule.Answer(ask.trade, self.kind)
-            end)
-            ask.buttons[i] = b
-        end
-        b.kind = opt
-        b:SetText(L["TRADEKIND_" .. opt])
-        b:ClearAllPoints()
-        b:SetPoint("BOTTOMLEFT", 12 + (i - 1) % 3 * 100, 12 + math.floor((i - 1) / 3) * 26)
-        b:Show()
-    end
-    ask.trade = t
-    ask:Show()
 end
 
 -- Mail settings ----------------------------------------------------------------------------------

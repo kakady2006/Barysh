@@ -165,7 +165,7 @@ function GetLocale() return "ruRU" end
 function debugstack(level) return debug.traceback("", (level or 1) + 1) end
 function InCombatLockdown() return Mock.inCombat end
 function IsShiftKeyDown() return Mock.shift == true end
-function UnitName(unit) if unit == "NPC" then return Mock.tradePartner end return "Tester" end
+function UnitName() return "Tester" end
 function GetRealmName() return "TestRealm" end
 function UnitFactionGroup() return Mock.faction or "Horde" end
 function GetMoney() return Mock.money or 0 end
@@ -524,29 +524,7 @@ function AutoLootMailItem(i)
     C_Timer.After(0.1, function() Mock.FireEvent("MAIL_INBOX_UPDATE") end)
 end
 
--- Trade -------------------------------------------------------------------------------------------
--- Mock.trade = { player = { {itemID, count} }, target = { ... }, playerMoney, targetMoney, enchant }
-Mock.trade = { player = {}, target = {}, playerMoney = 0, targetMoney = 0 }
-TradeFrame = newObject("Frame", "TradeFrame")
-MAX_TRADABLE_ITEMS = 6
-TRADE_ENCHANT_SLOT = 7
-ERR_TRADE_COMPLETE = "Trade complete."
-local function tradeInfo(list, i)
-    local it = list[i]
-    if not it then return nil end
-    return (Mock.items[it[1]] or {}).name or "x", 134400, it[2] or 1, 1, true, nil
-end
-function GetTradePlayerItemInfo(i) return tradeInfo(Mock.trade.player, i) end
-function GetTradeTargetItemInfo(i)
-    if i == TRADE_ENCHANT_SLOT and Mock.trade.enchant then
-        return "Bracer", 134400, 1, 2, true, Mock.trade.enchant
-    end
-    return tradeInfo(Mock.trade.target, i)
-end
-function GetTradePlayerItemLink(i) local it = Mock.trade.player[i]; return it and ("|Hitem:" .. it[1] .. "|h[x]|h") end
-function GetTradeTargetItemLink(i) local it = Mock.trade.target[i]; return it and ("|Hitem:" .. it[1] .. "|h[x]|h") end
-function GetPlayerTradeMoney() return Mock.trade.playerMoney or 0 end
-function GetTargetTradeMoney() return Mock.trade.targetMoney or 0 end
+-- Guild (mail: gold from strangers) -------------------------------------------------------------
 C_GuildInfo = { MemberExistsByName = function(name) return Mock.guild ~= nil and Mock.guild[name] == true end }
 
 -- Professions -------------------------------------------------------------------------------------

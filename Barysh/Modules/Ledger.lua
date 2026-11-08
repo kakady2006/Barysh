@@ -12,10 +12,10 @@ M.ACTIVITY = {
     ah_sell = "auction", ah_buy = "auction", ah_expired = "auction",
     disenchant = "disenchant",
     vendor_sell = "vendor", vendor_buy = "vendor",
-    craft = "craft", service = "service",
-    cod = "trade", trade_sell = "trade", trade_buy = "trade",
+    craft = "craft",
+    cod = "trade", -- COD mail: buying from players
 }
-M.ACTIVITIES = { "auction", "disenchant", "vendor", "craft", "service", "trade" }
+M.ACTIVITIES = { "auction", "disenchant", "vendor", "craft", "trade" }
 
 -- Records an operation; a disabled ledger records nothing.
 -- op = { kind, itemID, name, qty, amount, profit, note }

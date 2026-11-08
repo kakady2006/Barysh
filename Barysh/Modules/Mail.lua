@@ -97,7 +97,7 @@ function M.OtherKind(h)
     if h.cod > 0 then return "cod" end
     local sender = h.sender and (h.sender:match("^[^-]+") or h.sender)
     if sender and ownNames()[sender] then return "own" end
-    if h.money > 0 and ns.settings.mail.strangerWarn and not ns.TradeAPI.IsGuildMember(h.sender) then
+    if h.money > 0 and ns.settings.mail.strangerWarn and not MailAPI.IsGuildMember(h.sender) then
         return "stranger_gold"
     end
     return "plain"

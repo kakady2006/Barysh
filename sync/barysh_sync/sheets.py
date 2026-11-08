@@ -19,21 +19,20 @@ HEADERS = {
     CAPITAL: ["День", "Всего, з", "Золото, з", "Сумки, з", "Банки, з", "Почта, з", "Выставлено, з"],
     STOCK: ["Предмет", "Кол-во", "Себестоимость шт., з", "Цена шт., з", "Вложено, з", "Стоит, з", "Прибыль, з",
             "Продаж в день", "Зачем"],
-    ACTIVITY: ["Неделя с", "Аукцион, з", "Распыл, з", "Торговец, з", "Крафт, з", "Услуги, з", "Обмен, з", "Всего, з"],
+    ACTIVITY: ["Неделя с", "Аукцион, з", "Распыл, з", "Торговец, з", "Крафт, з", "Наложенный платёж, з", "Всего, з"],
 }
 
 KIND_NAMES = {
     "ah_sell": "Продажа", "ah_buy": "Покупка", "ah_expired": "Вернулось", "disenchant": "Распыл",
     "vendor_sell": "Торговцу", "vendor_buy": "У торговца", "craft": "Крафт", "cod": "Наложенный",
-    "trade_sell": "Обмен: продажа", "trade_buy": "Обмен: покупка", "service": "Услуга",
 }
 
 ACTIVITY_OF = {
     "ah_sell": "auction", "ah_buy": "auction", "ah_expired": "auction", "disenchant": "disenchant",
-    "vendor_sell": "vendor", "vendor_buy": "vendor", "craft": "craft", "service": "service",
-    "cod": "trade", "trade_sell": "trade", "trade_buy": "trade",
+    "vendor_sell": "vendor", "vendor_buy": "vendor", "craft": "craft",
+    "cod": "trade",
 }
-ACTIVITIES = ["auction", "disenchant", "vendor", "craft", "service", "trade"]
+ACTIVITIES = ["auction", "disenchant", "vendor", "craft", "trade"]
 
 
 def gold(copper):

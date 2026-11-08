@@ -3,6 +3,12 @@ local _, ns = ...
 local MailAPI = {}
 ns.MailAPI = MailAPI
 
+function MailAPI.IsGuildMember(name)
+    if not name then return false end
+    if C_GuildInfo and C_GuildInfo.MemberExistsByName then return C_GuildInfo.MemberExistsByName(name) end
+    return false
+end
+
 function MailAPI.Count()
     return (GetInboxNumItems()) or 0
 end

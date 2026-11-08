@@ -34,7 +34,6 @@ Logic\Selling.lua
 Logic\Serialize.lua
 Logic\Lists.lua
 Logic\Stock.lua
-Logic\Trade.lua
 Logic\Recipes.lua
 Logic\MarketStats.lua
 
@@ -43,7 +42,6 @@ Adapters\ItemsAPI.lua
 Adapters\BagsAPI.lua
 Adapters\MailAPI.lua
 Adapters\MerchantAPI.lua
-Adapters\TradeAPI.lua
 Adapters\ProfessionAPI.lua
 
 Data\Market.lua
@@ -64,7 +62,6 @@ Modules\Mail.lua
 Modules\Ledger.lua
 Modules\Disenchanter.lua
 Modules\Recipes.lua
-Modules\Trade.lua
 Modules\Sync.lua
 Core\Probe.lua
 

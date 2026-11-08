@@ -81,7 +81,7 @@ function IE.Preview(text)
 end
 
 -- Tables whose keys are free-form: taken from the string as a whole.
-local OPEN = { modules = true, services = true }
+local OPEN = { modules = true }
 
 -- Copies values only where the current settings have the same kind of value:
 -- unknown keys and wrong types from a foreign string are ignored.
