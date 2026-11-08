@@ -165,8 +165,8 @@ def test_tooltip_shows_prices_and_disenchant(game):
     open_ah(game)
     set_replicate(game, MARKET)
     full_scan(game)
-    lines = to_py(game.mock.ShowItemTooltip(GLOVES))
-    text = "\n".join(lines)
+    run(game, "WowMock.shift = true")
+    text = "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES)))
     assert "Barysh" in text
     assert "Аукцион | 5000c" in text
     # 0.75 * 5 * 1400 + 0.2 * 1.5 * 6000 + 0.05 * 10000 = 7550
@@ -356,78 +356,48 @@ def test_slash_commands_do_not_error(game):
     assert game.errors() == []
 
 
-# Compatibility with other tooltip addons ----------------------------------------------------------
+# Other tooltip addons ----------------------------------------------------------------------------
 
-def fake_other_addons(game):
+def test_old_compat_settings_are_put_back(game):
     run(game, """
         WowMock.loadedAddOns = { Mastercraft = true, Auctionator = true, Bagnon = true }
-        MastercraftDB = { settings = { lootTooltip = true, tipPrice = true, tipDisenchant = true,
-            tipCrafted = true, ownedTooltip = true } }
-        AUCTIONATOR_CONFIG = { vendor_tooltips = true, auction_tooltips = true, shift_stack_tooltips = true }
+        MastercraftDB = { settings = { lootTooltip = false, tipPrice = false, tipDisenchant = false } }
+        AUCTIONATOR_CONFIG = { vendor_tooltips = false, auction_tooltips = false }
         Auctionator = { Config = {
             Options = { VENDOR_TOOLTIPS = "vendor_tooltips", AUCTION_TOOLTIPS = "auction_tooltips" },
-            Get = function(name) return AUCTIONATOR_CONFIG[name] end,
             Set = function(name, v) AUCTIONATOR_CONFIG[name] = v end,
         } }
-        Bagnon_Sets = {}
+        Bagnon_Sets = { countItems = false }
+        BaryshDB.compat = { ["Mastercraft.lootTooltip"] = true, ["Mastercraft.tipPrice"] = true,
+            ["Mastercraft.tipDisenchant"] = true, ["Auctionator.AUCTION_TOOLTIPS"] = true,
+            ["Auctionator.VENDOR_TOOLTIPS"] = true, ["Bagnon.countItems"] = true }
     """)
-
-
-def test_compat_waits_for_own_prices(game):
-    fake_other_addons(game)
+    game.fire("PLAYER_LOGIN")
     game.mock.Advance(6)
-    assert game.g.MastercraftDB.settings.tipPrice is True
-    assert game.g.AUCTIONATOR_CONFIG.auction_tooltips is True
-
-
-def test_compat_turns_off_duplicates_and_restores(game):
-    fake_other_addons(game)
-    open_ah(game)
-    set_replicate(game, MARKET)
-    full_scan(game)
-    game.fire("AUCTION_HOUSE_CLOSED")
     mc = game.g.MastercraftDB.settings
-    assert mc.lootTooltip is False and mc.tipPrice is False and mc.tipDisenchant is False
-    # Mastercraft's own lines stay
-    assert mc.tipCrafted is True and mc.ownedTooltip is True
-    cfg = game.g.AUCTIONATOR_CONFIG
-    assert cfg.auction_tooltips is False and cfg.vendor_tooltips is False and cfg.shift_stack_tooltips is True
-    assert game.g.Bagnon_Sets.countItems is False
-    assert any("Mastercraft" in line for line in to_py(game.mock.printed))
-
-    game.ns.SetModuleEnabled("Compat", False)
     assert mc.lootTooltip is True and mc.tipPrice is True and mc.tipDisenchant is True
+    cfg = game.g.AUCTIONATOR_CONFIG
     assert cfg.auction_tooltips is True and cfg.vendor_tooltips is True
     assert game.g.Bagnon_Sets.countItems is True
+    assert game.g.BaryshDB.compat is None
     assert game.errors() == []
 
 
-def test_compat_skips_missing_addons(game):
+def test_tooltip_lines_only_with_shift(game):
     open_ah(game)
     set_replicate(game, MARKET)
     full_scan(game)
-    game.fire("AUCTION_HOUSE_CLOSED")
-    game.mock.Advance(6)
-    assert game.errors() == []
-
-
-def test_compat_keeps_bagnon_counts_when_mastercraft_hides_its_own(game):
-    fake_other_addons(game)
-    run(game, "MastercraftDB.settings.ownedTooltip = false")
-    open_ah(game)
-    set_replicate(game, MARKET)
-    full_scan(game)
-    game.fire("AUCTION_HOUSE_CLOSED")
-    assert game.g.Bagnon_Sets.countItems is None
-
-
-def test_tooltip_vendor_price_only_when_game_lacks_it(game):
-    text = "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES, game.to_lua([{"type": 1}]))))
-    assert "Торговцу | 300c" in text
-    text = "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES, game.to_lua([{"type": 11}]))))
-    assert "Торговцу" not in text
+    assert "Barysh" not in "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES)) or [])
+    run(game, "WowMock.shift = true")
     text = "\n".join(to_py(game.mock.ShowItemTooltip(GLOVES)))
-    assert "Торговцу" not in text
+    assert "Barysh" in text and "Торговцу" not in text
+    # Shift pressed over an item redraws the tooltip
+    run(game, "WowMock.refreshed = 0; GameTooltip.IsShown = function() return true end; "
+              "GameTooltip.RefreshData = function() WowMock.refreshed = WowMock.refreshed + 1 end")
+    game.fire("MODIFIER_STATE_CHANGED", "LSHIFT", 1)
+    game.fire("MODIFIER_STATE_CHANGED", "LCTRL", 1)
+    assert game.mock.refreshed == 1
+    assert game.errors() == []
 
 
 def test_disenchant_recorded_from_chat_when_auto_loot_took_slots(game):

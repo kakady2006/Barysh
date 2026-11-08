@@ -48,50 +48,22 @@ local function perDayText(s)
     return ("~%.1f"):format(s.perDay)
 end
 
--- The game shows the vendor price itself on most clients. Without a SellPrice line in the tooltip data
--- (VERIFY: Forever tooltips) Barysh adds it, since Auctionator's and Mastercraft's vendor lines are off
--- (Modules/Compat.lua). Unknown data shape: assume the game shows it.
-local function gameShowsSellPrice(data)
-    local types = Enum and Enum.TooltipDataLineType
-    local sellType = types and types.SellPrice
-    if not sellType or type(data) ~= "table" or type(data.lines) ~= "table" then return true end
-    for _, line in ipairs(data.lines) do
-        if type(line) == "table" and line.type == sellType then return true end
-    end
-    return false
-end
-M.GameShowsSellPrice = gameShowsSellPrice
-
-function M.AddLines(tooltip, itemID, link, data)
+-- Barysh lines appear only while Shift is held: the usual tooltip (vendor price from the game,
+-- Mastercraft and Auctionator lines) stays as it is.
+function M.AddLines(tooltip, itemID, link)
+    if not IsShiftKeyDown() then return end
     local key = ns.Prices.DefaultKey()
     local s = ns.Prices.Item(itemID, key)
     local de, breakdown = ns.DisenchantValue(link or itemID, key)
     local avgCost = ns.CostBasis.Average(ns.db.books, itemID)
-    local vendor
-    if not gameShowsSellPrice(data) then
-        local info = Items.Info(itemID)
-        if info and info.sellPrice and info.sellPrice > 0 then vendor = info.sellPrice end
-    end
-    if not s.current and not s.market and not de and not avgCost and not vendor then return end
+    if not s.current and not s.market and not de and not avgCost then return end
 
     tooltip:AddLine(GOLD_TEXT .. "Barysh|r")
-    if vendor then tooltip:AddDoubleLine(L.TT_VENDOR, money(vendor), 1, 0.82, 0, 1, 1, 1) end
-    if not s.current and not s.market and not de and not avgCost then return end
     local houseName = AH.IsNeutralKey(key) and L.TT_AH_NEUTRAL or L.TT_AH
     if s.current then tooltip:AddDoubleLine(houseName, money(s.current), 1, 0.82, 0, 1, 1, 1) end
     if s.market then
         local label = s.isNew and L.TT_NEW or L.TT_USUAL
         tooltip:AddDoubleLine(GREY .. label .. "|r", GREY .. money(s.market) .. "|r")
-    end
-    if de then tooltip:AddDoubleLine(L.TT_DISENCHANT, "≈ " .. money(de), 1, 0.82, 0, 1, 1, 1) end
-    if s.perDay and s.perDay > 0 then
-        tooltip:AddDoubleLine(L.TT_PER_DAY, perDayText(s), 1, 0.82, 0, 1, 1, 1)
-    end
-    if avgCost then tooltip:AddDoubleLine(L.TT_COST, money(avgCost), 1, 0.82, 0, 1, 1, 1) end
-
-    if not IsShiftKeyDown() then
-        tooltip:AddLine(GREY .. L.TT_SHIFT .. "|r")
-        return
     end
     if s.min7 then
         tooltip:AddDoubleLine(L.TT_MIN_MEDIAN, money(s.min7) .. " · " .. money(s.median7), 1, 0.82, 0, 1, 1, 1)
@@ -103,12 +75,16 @@ function M.AddLines(tooltip, itemID, link, data)
             tooltip:AddDoubleLine(L.TT_AH_NEUTRAL, money(n.market or n.current), 1, 0.82, 0, 1, 1, 1)
         end
     end
-    tooltip:AddDoubleLine(L.TT_PER_DAY, perDayText(s) .. " " .. L.TT_ESTIMATE, 1, 0.82, 0, 1, 1, 1)
-    if breakdown then
-        for _, b in ipairs(breakdown) do
+    if s.perDay and s.perDay > 0 then
+        tooltip:AddDoubleLine(L.TT_PER_DAY, perDayText(s) .. " " .. L.TT_ESTIMATE, 1, 0.82, 0, 1, 1, 1)
+    end
+    if avgCost then tooltip:AddDoubleLine(L.TT_COST, money(avgCost), 1, 0.82, 0, 1, 1, 1) end
+    if de then
+        tooltip:AddDoubleLine(L.TT_DISENCHANT, "≈ " .. money(de), 1, 0.82, 0, 1, 1, 1)
+        for _, b in ipairs(breakdown or {}) do
             local name = Items.Name(b.itemID) or ("#" .. b.itemID)
             local count = b.min == b.max and tostring(b.min) or (b.min .. "–" .. b.max)
-            tooltip:AddDoubleLine(("%d%% · %s %s"):format(math.floor(b.chance * 100 + 0.5), count, name),
+            tooltip:AddDoubleLine(("  %d%% · %s %s"):format(math.floor(b.chance * 100 + 0.5), count, name),
                 GREY .. (b.price and money(b.price) or "?") .. "|r", 1, 1, 1)
         end
     end
@@ -128,11 +104,20 @@ local function onItemTooltip(tooltip, data)
     local itemID = data and data.id
     if not itemID or (issecretvalue and issecretvalue(itemID)) then return end
     local _, link = tooltip:GetItem()
-    ns.Safe(M.AddLines, tooltip, itemID, link, data)
+    ns.Safe(M.AddLines, tooltip, itemID, link)
+end
+
+-- Pressing or releasing Shift over an item redraws the tooltip, so the Barysh lines come and go.
+local function onModifier(_, _, key)
+    if key ~= "LSHIFT" and key ~= "RSHIFT" then return end
+    if not GameTooltip:IsShown() or not GameTooltip.RefreshData then return end
+    local _, link = GameTooltip:GetItem()
+    if link then GameTooltip:RefreshData() end
 end
 
 local hooked = false
 function M:OnEnable()
+    self:RegisterEvent("MODIFIER_STATE_CHANGED", onModifier)
     if hooked then return end
     hooked = true
     if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall then
