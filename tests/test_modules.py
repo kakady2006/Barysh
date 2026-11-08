@@ -459,7 +459,7 @@ def test_lots_for_a_chosen_material(game):
     game.ns.Prices.Invalidate()
     rows = for_material(game, DUST)
     assert [r["itemID"] for r in rows] == [GLOVES]
-    assert rows[0]["yield"] == 3.75 and rows[0]["type"] == "disenchant"
+    assert rows[0]["yield"] == 3.75 and rows[0]["price"] == 5000 and rows[0]["count"] == 1
     assert for_material(game, SHARD)[0]["itemID"] == GLOVES
     assert not for_material(game, 11176)  # Dream Dust: nothing on this auction
     ui = game.ns.UI
@@ -469,4 +469,11 @@ def test_lots_for_a_chosen_material(game):
     game.g.BaryshDB.deTarget = DUST
     ui.Refresh()
     assert ui.current.id == "detarget"
+    # a click on the item opens it on the game's own auction page
+    run(game, """WowMock.browsed = nil
+        AuctionHouseFrameDisplayMode = { Buy = { "buy" } }
+        AuctionHouseFrame:Show()
+        function AuctionHouseFrame:SelectBrowseResult(r) WowMock.browsed = r.itemKey end""")
+    assert game.ns.AH.ShowInBrowse(GLOVES)
+    assert game.mock.browsed is not None
     assert game.errors() == []

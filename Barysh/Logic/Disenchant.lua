@@ -82,37 +82,38 @@ function Disenchant.Yield(outcomes, materialID)
     return n
 end
 
--- Auction lots that disenchant into one material, cheapest material first.
+-- Items on the auction that disenchant into one material, cheapest material first. One row per item,
+-- at the price of its cheapest lot (unit price).
 -- candidates = { { itemID, outcomes, lots = { {qty, price (unit)} }, other = value of the other
 --                  materials per disenchant, already after the cut } }
 -- matPrice = what one unit of the material costs on the auction now (nil = unknown).
--- Each row: itemID, qty, maxPrice (unit), cost, yield (material from the whole lot),
+-- Each row: itemID, price (cheapest unit price), count (units listed), yield (material per item),
 --   perUnit = cost of one material after selling the rest, profit = against buying the material
 --   (nil when matPrice is unknown).
 function Disenchant.ForMaterial(candidates, materialID, matPrice)
     local rows = {}
     for _, c in ipairs(candidates) do
         local y = Disenchant.Yield(c.outcomes, materialID)
-        if y > 0 then
-            for _, l in ipairs(c.lots or {}) do
-                if l.qty > 0 and l.price > 0 then
-                    local cost = l.price * l.qty
-                    local other = (c.other or 0) * l.qty
-                    local yield = y * l.qty
-                    local row = {
-                        itemID = c.itemID, qty = l.qty, maxPrice = l.price, cost = cost, yield = yield,
-                        perUnit = math.floor((cost - other) / yield + 0.5),
-                    }
-                    if matPrice then row.profit = math.floor(yield * matPrice + other - cost + 0.5) end
-                    rows[#rows + 1] = row
-                end
+        local price, count = nil, 0
+        for _, l in ipairs(c.lots or {}) do
+            if l.qty > 0 and l.price > 0 then
+                count = count + l.qty
+                if not price or l.price < price then price = l.price end
             end
+        end
+        if y > 0 and price then
+            local other = c.other or 0
+            local row = {
+                itemID = c.itemID, price = price, count = count, yield = y,
+                perUnit = math.floor((price - other) / y + 0.5),
+            }
+            if matPrice then row.profit = math.floor(y * matPrice + other - price + 0.5) end
+            rows[#rows + 1] = row
         end
     end
     table.sort(rows, function(a, b)
         if a.perUnit ~= b.perUnit then return a.perUnit < b.perUnit end
-        if a.itemID ~= b.itemID then return a.itemID < b.itemID end
-        return a.cost < b.cost
+        return a.itemID < b.itemID
     end)
     return rows
 end

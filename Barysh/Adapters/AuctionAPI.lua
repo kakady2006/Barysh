@@ -53,6 +53,27 @@ function AH.Search(itemID)
     return key
 end
 
+-- Opens the game's own buy page of the auction house on one item (a click on a Barysh row).
+-- The player buys there by hand. Falls back to a text search by name. Returns true when it worked.
+function AH.ShowInBrowse(itemID)
+    local f = AuctionHouseFrame
+    if not f or not f:IsShown() then return false end
+    local modes = AuctionHouseFrameDisplayMode
+    if modes and modes.Buy and f.SetDisplayMode then f:SetDisplayMode(modes.Buy) end
+    if f.SelectBrowseResult and C_AuctionHouse.MakeItemKey then
+        local ok = pcall(f.SelectBrowseResult, f, { itemKey = C_AuctionHouse.MakeItemKey(itemID) })
+        if ok then return true end
+    end
+    local name = ns.Items.Name(itemID)
+    local bar = f.SearchBar
+    if name and bar and bar.SearchBox and bar.StartSearch then
+        bar.SearchBox:SetText(name)
+        pcall(bar.StartSearch, bar)
+        return true
+    end
+    return false
+end
+
 -- Lots from the last commodity search: { {qty, price, tl, auctionID}, ... }, complete
 function AH.CommodityResults(itemID)
     local lots = {}

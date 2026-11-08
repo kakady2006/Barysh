@@ -205,10 +205,6 @@ function M.ForMaterial(materialID, key, force)
         if M.matJob == job then M.matJob = nil end
         if not ok then return end
         local rows = Disenchant.ForMaterial(candidates, materialID, M.MaterialPrice(materialID, key))
-        for _, r in ipairs(rows) do
-            r.type, r.commodity, r.key = "disenchant", false, key
-        end
-        M.key = M.key or key
         M.matCache = { materialID = materialID, key = key, snap = job.snap, lastAny = job.lastAny,
             rows = rows, loading = loading }
         if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end

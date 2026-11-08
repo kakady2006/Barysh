@@ -119,12 +119,10 @@ def test_lots_for_one_material_cheapest_material_first(logic):
         {"itemID": 3, "outcomes": blue, "other": 0, "lots": [{"qty": 1, "price": 1}]},
     ])
     rows = to_py(D.ForMaterial(cands, STRANGE_DUST, 1000))
-    assert [(r["itemID"], r["perUnit"]) for r in rows] == [(2, 400), (1, 533), (1, 1000)]
-    # weapon: 1 dust worth 1000 + 600 of the rest - 1000 paid
-    assert rows[0]["profit"] == 600 and rows[0]["cost"] == 1000
-    # a stack of two: 7.5 dust for 4000
-    assert rows[1]["qty"] == 2 and rows[1]["yield"] == pytest.approx(7.5) and rows[1]["profit"] == 3500
-    # material price unknown: no saving
+    # one row per item, at its cheapest lot: item 1 is 2000 for 3.75 dust
+    assert [(r["itemID"], r["perUnit"]) for r in rows] == [(2, 400), (1, 533)]
+    assert rows[0]["profit"] == 600 and rows[0]["price"] == 1000 and rows[0]["count"] == 1
+    assert rows[1]["price"] == 2000 and rows[1]["count"] == 3 and rows[1]["profit"] == 1750
     assert "profit" not in to_py(D.ForMaterial(cands, STRANGE_DUST, None))[0]
 
 
