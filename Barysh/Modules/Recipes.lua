@@ -81,22 +81,30 @@ function M.RecentlyCrafted()
     return out
 end
 
-local function refresh()
+-- show: open the panel (the profession window was just opened). List updates only redraw it:
+-- they also come from clicks elsewhere (buying at the auction changes the bags), and must not
+-- bring back a panel the player closed or put it over the auction house.
+local function refresh(show)
     M.queued = false
     if not M.open then return end
     M.Read()
-    if ns.UI and ns.UI.RecipesPanel then ns.UI.RecipesPanel(true) end
+    if not ns.UI then return end
+    if show then
+        if ns.UI.RecipesPanel then ns.UI.RecipesPanel(true) end
+    elseif ns.UI.RefreshRecipesPanel then
+        ns.UI.RefreshRecipesPanel()
+    end
 end
 
 function M:OnEnable()
     self:RegisterEvent("TRADE_SKILL_SHOW", function()
         M.open = true
-        refresh()
+        refresh(true)
     end)
     self:RegisterEvent("TRADE_SKILL_LIST_UPDATE", function()
         if M.open and not M.queued then
             M.queued = true
-            C_Timer.After(0.5, refresh)
+            C_Timer.After(0.5, function() refresh(false) end)
         end
     end)
     self:RegisterEvent("TRADE_SKILL_CLOSE", function()

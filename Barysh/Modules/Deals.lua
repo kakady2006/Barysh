@@ -199,7 +199,7 @@ function M.Alert(rows)
     if not best then return end
     PlaySound(SOUNDKIT.AUCTION_WINDOW_OPEN)
     ns.Print(L.DEAL_ALERT:format(Items.ColoredName(best.itemID), ns.FormatMoney(best.profit)))
-    if s.popup and ns.UI and ns.UI.Show then ns.UI.Show("deals") end
+    if s.popup and ns.UI and ns.UI.ShowAuto then ns.UI.ShowAuto("deals") end
 end
 
 -- Price drop of 30%+ in 24 h on a big volume: one message per item per day.

@@ -92,18 +92,31 @@ local function refreshRecipes()
     recipes.craft:SetEnabled(plan ~= nil and #plan.steps > 0)
 end
 
+-- The panel goes with the profession window: it closes when that window hides, even without
+-- the game's close event.
+local watchedProfession
 function UI.RecipesPanel(show)
     if not show then
         if recipes then recipes:Hide() end
         return
     end
     if not ns.settings.recipes.shown then return end
-    recipes = recipes or buildRecipes()
     local anchor = ns.ProfessionAPI.Frame()
+    if anchor and anchor.IsShown and not anchor:IsShown() then return end
+    recipes = recipes or buildRecipes()
+    if anchor and anchor ~= watchedProfession and anchor.HookScript then
+        watchedProfession = anchor
+        anchor:HookScript("OnHide", function() if recipes then recipes:Hide() end end)
+    end
     recipes:ClearAllPoints()
     if anchor then recipes:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 4, 0) else recipes:SetPoint("CENTER") end
     recipes:Show()
     ns.Safe(refreshRecipes)
+end
+
+-- New data for an open panel; a closed one stays closed.
+function UI.RefreshRecipesPanel()
+    if recipes and recipes:IsShown() then ns.Safe(refreshRecipes) end
 end
 
 -- Mail settings ----------------------------------------------------------------------------------

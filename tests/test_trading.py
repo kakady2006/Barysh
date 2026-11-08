@@ -491,3 +491,41 @@ def test_mail_docking_skips_forbidden_frames(game):
     make_mail(game)
     assert game.ns.UI.Frame().shown
     assert game.errors() == []
+
+
+def test_recipes_panel_not_reopened_by_list_updates(game):
+    run(game, f"""WowMock.recipes = {{ {{ recipeID = 2963, name = "Bolt of Linen Cloth", output = {BOLT}, difficulty = 0,
+        reagents = {{ {{ {LINEN}, 2 }} }} }} }}""")
+    run(game, "ProfessionsFrame:Show()")
+    game.fire("TRADE_SKILL_SHOW")
+    panel = game.g.BaryshRecipes
+    assert panel.shown
+    run(game, "BaryshRecipes:Hide()")
+    # buying at the auction changes the bags, the game sends list updates
+    game.fire("TRADE_SKILL_LIST_UPDATE")
+    game.mock.Advance(1)
+    assert not panel.shown
+    game.fire("TRADE_SKILL_SHOW")
+    assert panel.shown
+    # the profession window hides without the close event: the panel goes too
+    run(game, "ProfessionsFrame:Hide()")
+    assert not panel.shown
+    assert game.errors() == []
+
+
+def test_window_opened_at_mailbox_closes_with_it(game):
+    run(game, "MailFrame:Show()")
+    game.fire("MAIL_SHOW")
+    f = game.ns.UI.Frame()
+    assert f.shown
+    # no MAIL_CLOSED, only the mailbox hides
+    run(game, "MailFrame:Hide()")
+    assert not f.shown
+    # a window the player opened stays when the mailbox closes
+    game.ns.UI.Show()
+    run(game, "MailFrame:Show()")
+    game.fire("MAIL_SHOW")
+    run(game, "MailFrame:Hide()")
+    game.fire("MAIL_CLOSED")
+    assert f.shown
+    assert game.errors() == []

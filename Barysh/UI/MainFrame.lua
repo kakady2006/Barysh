@@ -268,6 +268,15 @@ local function redockSoon(f, anchor)
     end)
 end
 
+-- A window opened by itself next to a game window closes with it, whatever event the game sends:
+-- the game window's OnHide is watched too. A window the player had open already stays open.
+local watched = {}
+local function watchAnchor(anchor)
+    if watched[anchor] or not anchor.HookScript then return end
+    watched[anchor] = true
+    anchor:HookScript("OnHide", function() ns.Safe(UI.HideNear, anchor) end)
+end
+
 function UI.ShowNear(anchor, tabId)
     if not anchor then return end
     local f = UI.Frame()
@@ -278,8 +287,18 @@ function UI.ShowNear(anchor, tabId)
     end
     dock(f, anchor)
     f.dockedTo = anchor
+    watchAnchor(anchor)
     UI.Show(tabId)
     redockSoon(f, anchor)
+end
+
+-- Opening by itself (deal alert): at the auction house on the Barysh page there, so it goes away with it.
+function UI.ShowAuto(tabId)
+    if ns.Scan and ns.Scan.ahOpen and UI.SelectAuctionTab and UI.SelectAuctionTab() then
+        if tabId then UI.SelectTab(tabId) end
+        return
+    end
+    UI.Show(tabId)
 end
 
 function UI.HideNear(anchor)
