@@ -474,3 +474,20 @@ def test_mail_settings_on_mailbox(game):
     bar.module.GetScript(bar.module, "OnClick")(bar.module)
     assert game.ns.IsModuleEnabled("Mail")
     assert game.errors() == []
+
+
+def test_mail_docking_skips_forbidden_frames(game):
+    # The game's protected frames throw when an addon touches them (seen in game, 2026-11-08).
+    run(game, """
+        local forbidden = setmetatable({}, { __index = function(_, k)
+            if k == "IsForbidden" then return function() return true end end
+            return function() error("Attempt to access forbidden object from code tainted by an AddOn") end
+        end })
+        local broken = setmetatable({}, { __index = function(_, k)
+            return function() error("bad self") end
+        end })
+        function UIParent:GetChildren() return forbidden, broken end
+    """)
+    make_mail(game)
+    assert game.ns.UI.Frame().shown
+    assert game.errors() == []

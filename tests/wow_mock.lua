@@ -489,6 +489,11 @@ function AHX.GetCancelCost() return 0 end
 -- Mock.merchant = { {itemID, price, stack} }; selling uses a bag item while Mock.merchantOpen.
 Mock.merchant = {}
 MerchantFrame = newObject("Frame", "MerchantFrame")
+
+-- Auction house window (Blizzard_AuctionHouseUI): display mode tabs at the bottom.
+AuctionHouseFrame = newObject("Frame", "AuctionHouseFrame")
+AuctionHouseFrame.Tabs = { newObject("Button", "AuctionHouseFrameBuyTab", AuctionHouseFrame) }
+function AuctionHouseFrame:SetDisplayMode(mode) self.displayMode = mode end
 MailFrame = newObject("Frame", "MailFrame")
 function GetMerchantItemID(i) return Mock.merchant[i] and Mock.merchant[i][1] end
 function GetMerchantItemInfo(i)

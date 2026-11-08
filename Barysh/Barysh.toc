@@ -72,6 +72,7 @@ UI\TabTrade.lua
 UI\TabMoney.lua
 UI\Settings.lua
 UI\Panels.lua
+UI\AuctionTab.lua
 
 Core\Slash.lua
 Core\Boot.lua

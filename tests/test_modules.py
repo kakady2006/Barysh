@@ -299,7 +299,14 @@ def test_main_window_and_tabs(game):
     full_scan(game)
     ui = game.ns.UI
     frame = ui.Frame()
-    assert frame.shown  # opened next to the auction house
+    assert not frame.shown  # the auction house has a Barysh tab instead of a window beside it
+    tab = game.g.BaryshAuctionTab
+    tab.GetScript(tab, "OnClick")(tab)
+    assert frame.shown and frame.embedded
+    # a game tab takes the page back
+    game.g.AuctionHouseFrame.SetDisplayMode(game.g.AuctionHouseFrame, game.to_lua(["BrowseResultsFrame"]))
+    assert not frame.shown and not frame.embedded
+    tab.GetScript(tab, "OnClick")(tab)
     for tab in ("overview", "deals", "selling", "ledger", "mail"):
         ui.SelectTab(tab)
         assert ui.current.id == tab
@@ -307,7 +314,7 @@ def test_main_window_and_tabs(game):
     ledger_tab = next(t for t in to_py_tabs(game) if t.id == "ledger")
     assert not ledger_tab.button.shown
     game.fire("AUCTION_HOUSE_CLOSED")
-    assert not frame.shown
+    assert not frame.shown and not frame.embedded
     game.g.SlashCmdList.BARYSH("")
     assert frame.shown
     game.mock.RunFrames(70)

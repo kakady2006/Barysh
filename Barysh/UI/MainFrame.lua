@@ -3,7 +3,7 @@ local _, ns = ...
 local UI = ns.UI
 local L = ns.L
 
--- Main window: sticks to the right edge of the auction house, opens from the minimap button too.
+-- Main window: the "Barysh" tab of the auction house (UI/AuctionTab.lua), the minimap button, the mailbox.
 -- Tabs at the bottom; a disabled module removes its tab.
 local WIDTH, HEIGHT = 620, 560
 
@@ -168,6 +168,9 @@ end
 
 function UI.Toggle()
     local f = UI.Frame()
+    if f.embedded then return end -- the auction house tab owns it now
+    -- At the auction house the minimap button opens the Barysh tab.
+    if not f:IsShown() and ns.Scan and ns.Scan.ahOpen and UI.SelectAuctionTab and UI.SelectAuctionTab() then return end
     f:SetShown(not f:IsShown())
 end
 
@@ -185,16 +188,23 @@ local function dockTarget(f, anchor)
     local target, edge = anchor, anchor.GetRight and anchor:GetRight()
     if not edge or not UIParent or not UIParent.GetChildren then return anchor end
     local start = edge
-    for _, c in ipairs({ UIParent:GetChildren() }) do
-        if c ~= f and c.IsShown and c:IsShown() and c.GetNumPoints then
-            for i = 1, c:GetNumPoints() do
-                local _, rel = c:GetPoint(i)
-                if rel == anchor then
-                    local left, right = c:GetLeft(), c:GetRight()
-                    if left and right and left >= start - 2 and right > edge then target, edge = c, right end
-                    break
-                end
+    -- The game's protected frames are forbidden to addons: skip them, and never let one frame break the loop.
+    local function besideAnchor(c)
+        if not c:IsShown() then return nil end
+        for i = 1, c:GetNumPoints() do
+            local _, rel = c:GetPoint(i)
+            if rel == anchor then
+                local left, right = c:GetLeft(), c:GetRight()
+                if left and right and left >= start - 2 then return right end
+                return nil
             end
+        end
+    end
+    for _, c in ipairs({ UIParent:GetChildren() }) do
+        local forbidden = c.IsForbidden and c:IsForbidden()
+        if c ~= f and not forbidden then
+            local ok, right = pcall(besideAnchor, c)
+            if ok and right and right > edge then target, edge = c, right end
         end
     end
     return target
@@ -208,7 +218,7 @@ end
 -- Their panels may appear a moment after the game window: look again shortly after.
 local function redockSoon(f, anchor)
     C_Timer.After(0.3, function()
-        if f:IsShown() and (f.dockedTo == anchor or (anchor == AuctionHouseFrame and f.dockedOpen)) then
+        if f:IsShown() and f.dockedTo == anchor then
             ns.Safe(dock, f, anchor)
         end
     end)
@@ -217,6 +227,7 @@ end
 function UI.ShowNear(anchor, tabId)
     if not anchor then return end
     local f = UI.Frame()
+    if f.embedded then return end -- shown inside the auction house
     if f:IsShown() and not f.dockedTo then
         if tabId then UI.SelectTab(tabId) end
         return
@@ -235,17 +246,10 @@ function UI.HideNear(anchor)
     end
 end
 
--- Docking to the auction house window.
+-- The auction house gets a "Barysh" tab; the window lives inside it while that tab is selected.
 function UI.OnAuctionHouse(open)
-    local f = UI.Frame()
-    if open then
-        if AuctionHouseFrame then dock(f, AuctionHouseFrame) end
-        f:Show()
-        if AuctionHouseFrame then redockSoon(f, AuctionHouseFrame) end
-    elseif not open and f.dockedOpen then
-        f:Hide()
-    end
-    f.dockedOpen = open
+    if open and UI.CreateAuctionTab then UI.CreateAuctionTab() end
+    if not open and UI.CloseAuctionTab then UI.CloseAuctionTab() end
 end
 
 function UI.ModulesChanged()
