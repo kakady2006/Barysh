@@ -453,3 +453,13 @@ def test_parse_loot_message(game):
     assert parse(f"You receive loot: |Hitem:{DUST}|h[x]|hx12.") == (DUST, 12)
     assert parse(f"You receive loot: |Hitem:{DUST}|h[x]|h.") == (DUST, 1)
     assert parse("Someone receives loot: x.") is None
+
+
+def test_disenchant_button_moves_with_shift_only(game):
+    b = game.g.BaryshDisenchantButton
+    # Shift + click does nothing, so Shift + drag never disenchants
+    assert b.attributes["shift-type*"] == "macro" and b.attributes["shift-macrotext*"] == ""
+    game.ns.cdb.dePos = game.to_lua(["TOPLEFT", "TOPLEFT", 10, -10])
+    game.ns.Disenchanter.ResetPosition()
+    assert game.ns.cdb.dePos is None
+    assert game.errors() == []

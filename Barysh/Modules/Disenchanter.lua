@@ -162,25 +162,43 @@ function M.ApplyBinding()
     end
 end
 
-local function createButton()
-    if M.button then return M.button end
-    local b = CreateFrame("Button", "BaryshDisenchantButton", UIParent, "SecureActionButtonTemplate")
-    b:SetSize(48, 48)
-    b:RegisterForClicks("AnyUp", "AnyDown")
-    b:SetMovable(true)
-    b:RegisterForDrag("LeftButton")
-    b:SetScript("OnDragStart", function(self) if IsShiftKeyDown() and not InCombatLockdown() then self:StartMoving() end end)
-    b:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, rel, x, y = self:GetPoint()
-        ns.cdb.dePos = { point, rel, x, y }
-    end)
+function M.PlaceButton(b)
+    b = b or M.button
+    if not b or InCombatLockdown() then return end
+    b:ClearAllPoints()
     local pos = ns.cdb.dePos
     if pos then
         b:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4])
     else
         b:SetPoint("CENTER", UIParent, "CENTER", 300, -150)
     end
+end
+
+-- Settings: "Put the button back" after it was dragged somewhere awkward.
+function M.ResetPosition()
+    ns.cdb.dePos = nil
+    M.PlaceButton()
+end
+
+local function createButton()
+    if M.button then return M.button end
+    local b = CreateFrame("Button", "BaryshDisenchantButton", UIParent, "SecureActionButtonTemplate")
+    b:SetSize(48, 48)
+    b:RegisterForClicks("AnyUp", "AnyDown")
+    -- Shift + drag moves the button. With Shift held a click does nothing (an empty macro), otherwise
+    -- the press that starts the drag would already disenchant.
+    b:SetAttribute("shift-type*", "macro")
+    b:SetAttribute("shift-macrotext*", "")
+    b:SetMovable(true)
+    b:SetClampedToScreen(true)
+    b:RegisterForDrag("LeftButton", "RightButton")
+    b:SetScript("OnDragStart", function(self) if IsShiftKeyDown() and not InCombatLockdown() then self:StartMoving() end end)
+    b:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local point, _, rel, x, y = self:GetPoint()
+        ns.cdb.dePos = { point, rel, x, y }
+    end)
+    M.PlaceButton(b)
     local icon = b:CreateTexture(nil, "ARTWORK")
     icon:SetAllPoints()
     icon:SetTexture(C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(M.SPELL_ID) or 132871)

@@ -34,7 +34,6 @@ ns.defaults = {
         keepValuable = true, -- quality modes skip what is worth more on the auction house or disenchanted
         easy = true,        -- bought as "easy money"
         better = true,      -- worth more to the vendor than on the auction house or disenchanted
-        auto = false,       -- sell when the vendor opens, at most one buyback tab (12 stacks)
     },
     mail = {
         strangerWarn = true,
@@ -104,7 +103,9 @@ end
 -- vendor.junk (one checkbox for grey items) became vendor.quality.grey.
 local function migrateVendor(profile)
     local v = profile and profile.vendor
-    if type(v) ~= "table" or v.junk == nil then return end
+    if type(v) ~= "table" then return end
+    v.auto = nil -- selling on vendor open was removed: the game sells junk by itself
+    if v.junk == nil then return end
     if type(v.quality) ~= "table" then v.quality = { grey = v.junk } end
     v.junk = nil
 end
