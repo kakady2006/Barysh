@@ -8,7 +8,7 @@ local Items = ns.Items
 -- in blocks on the right, profile in the header, "Reset group" and "Done" at the bottom.
 -- Dependent options are shown inactive with an explanation.
 
-local WIDTH, HEIGHT = 660, 540
+local WIDTH, HEIGHT = 780, 560
 
 local GROUP_KEYS = {
     core = { "scan", "tooltip", "summaryDays", "staleHours", "minimap" },
@@ -42,14 +42,19 @@ local function newLayout(parent)
 end
 
 function Layout:Header(text)
-    local fs = UI.Text(self.parent, "GameFontNormal")
+    if self.y > 0 then self.y = self.y + 8 end
+    local fs = UI.Heading(self.parent, text)
     fs:SetPoint("TOPLEFT", 0, -self.y - 4)
-    fs:SetText(text)
-    self.y = self.y + 24
+    local line = self.parent:CreateTexture(nil, "ARTWORK")
+    line:SetColorTexture(UI.RGB(UI.COLOR.line))
+    line:SetHeight(1)
+    line:SetPoint("TOPLEFT", 0, -self.y - 22)
+    line:SetPoint("RIGHT", self.parent, "RIGHT", -10, 0)
+    self.y = self.y + 30
 end
 
 function Layout:Note(text)
-    local fs = UI.Text(self.parent, "GameFontDisableSmall")
+    local fs = UI.Hint(self.parent, "")
     fs:SetPoint("TOPLEFT", 4, -self.y)
     fs:SetWidth(440)
     fs:SetText(text)
@@ -397,7 +402,7 @@ local win
 
 local function selectGroup(g)
     win.group = g
-    for _, b in ipairs(win.groupButtons) do b:SetEnabled(b.group ~= g) end
+    for _, b in ipairs(win.groupButtons) do b:SetOn(b.group == g) end
     for name, page in pairs(win.pages) do page.scroll:SetShown(name == g) end
     UI.RefreshSettings()
 end
@@ -415,9 +420,18 @@ local function buildWindow()
     win = UI.Window("BaryshSettings", WIDTH, HEIGHT)
     win:SetPoint("CENTER")
     win:SetFrameStrata("DIALOG")
-    local title = UI.Text(win, "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 16, -14)
-    title:SetText(L.SETTINGS_TITLE)
+    win:SetTitle(L.SETTINGS_TITLE)
+    -- sidebar with the groups (barysh-design/Settings)
+    local side = CreateFrame("Frame", nil, win, "BackdropTemplate")
+    side:SetPoint("TOPLEFT", 2, -43)
+    side:SetPoint("BOTTOMLEFT", 2, 2)
+    side:SetWidth(200)
+    UI.Flat(side, { 0.04, 0.035, 0.03 }, { 0, 0, 0, 0 })
+    local sideLine = side:CreateTexture(nil, "ARTWORK")
+    sideLine:SetColorTexture(UI.RGB(UI.COLOR.line))
+    sideLine:SetWidth(1)
+    sideLine:SetPoint("TOPRIGHT")
+    sideLine:SetPoint("BOTTOMRIGHT")
     win.profile = UI.Cycle(win, 190, { { "account", L.PROFILE_ACCOUNT }, { "char", L.PROFILE_CHAR } },
         function() return ns.cdb.profileMode end,
         function(v)
@@ -426,12 +440,15 @@ local function buildWindow()
             UI.ModulesChanged()
             UI.RefreshSettings()
         end, L.TIP_PROFILE)
-    win.profile:SetPoint("TOPRIGHT", -40, -12)
+    win.profile:SetHeight(22)
+    win.profile:SetPoint("RIGHT", win.close, "LEFT", -8, 0)
 
     win.groupButtons, win.groupChecks, win.pages = {}, {}, {}
     for i, g in ipairs(ns.groups) do
-        local b = UI.Button(win, L["GROUP_" .. g:upper()], 120, function() selectGroup(g) end)
-        b:SetPoint("TOPLEFT", 40, -44 - (i - 1) * 28)
+        local b = UI.Chip(side, L["GROUP_" .. g:upper()], function() selectGroup(g) end)
+        b:SetHeight(26)
+        b:SetPoint("TOPLEFT", 34, -14 - (i - 1) * 32)
+        b:SetPoint("RIGHT", side, "RIGHT", -10, 0)
         b.group = g
         win.groupButtons[i] = b
         local mods = groupModules(g)
@@ -443,15 +460,15 @@ local function buildWindow()
                 for _, n in ipairs(mods) do ns.SetModuleEnabled(n, v) end
                 UI.RefreshSettings()
             end, L.TIP_GROUP_CHECK)
-            cb:SetPoint("RIGHT", b, "LEFT", -2, 0)
+            cb:SetPoint("RIGHT", b, "LEFT", -4, 0)
             win.groupChecks[#win.groupChecks + 1] = cb
         end
 
         local scroll = CreateFrame("ScrollFrame", nil, win, "UIPanelScrollFrameTemplate")
-        scroll:SetPoint("TOPLEFT", 176, -44)
-        scroll:SetPoint("BOTTOMRIGHT", -34, 48)
+        scroll:SetPoint("TOPLEFT", 218, -56)
+        scroll:SetPoint("BOTTOMRIGHT", -32, 50)
         local child = CreateFrame("Frame", nil, scroll)
-        child:SetSize(450, 10)
+        child:SetSize(520, 10)
         scroll:SetScrollChild(child)
         scroll:Hide()
         local l = newLayout(child)
@@ -465,8 +482,8 @@ local function buildWindow()
         ns.Prices.Invalidate()
         UI.RefreshSettings()
     end, L.TIP_RESET_GROUP)
-    win.reset:SetPoint("BOTTOMLEFT", 16, 14)
-    win.done = UI.Button(win, L.BTN_DONE, 100, function() win:Hide() end)
+    win.reset:SetPoint("BOTTOMRIGHT", -124, 14)
+    win.done = UI.Button(win, L.BTN_DONE, 100, function() win:Hide() end, nil, "primary")
     win.done:SetPoint("BOTTOMRIGHT", -16, 14)
     win:Hide()
     selectGroup("core")

@@ -14,17 +14,16 @@ local DIFFICULTY_COLOR = { [0] = "ff8040", [1] = "ffff00", [2] = "40bf40", [3] =
 local recipes
 
 local function buildRecipes()
-    local f = UI.Window("BaryshRecipes", 440, 500)
+    local f = UI.Window("BaryshRecipes", 480, 540)
     f:SetFrameStrata("MEDIUM")
-    f.title = UI.Text(f, "GameFontNormal")
-    f.title:SetPoint("TOPLEFT", 16, -14)
-    f.header = UI.Text(f, "GameFontDisableSmall")
-    f.header:SetPoint("TOPLEFT", 40, -36)
-    f.header:SetText(L.RECIPES_HEADER)
-    f.list = UI.ScrollList(f, {
-        { width = 150 }, { width = 56, justify = "RIGHT" }, { width = 56, justify = "RIGHT" },
-        { width = 56, justify = "RIGHT" }, { width = 50, justify = "RIGHT" },
-    }, 12, {
+    f.list = UI.Table(f, {
+        { title = L.COL_RECIPE, flex = true },
+        { title = L.COL_REAGENTS, width = 62, justify = "RIGHT" },
+        { title = L.COL_SALE, width = 62, justify = "RIGHT" },
+        { title = L.COL_PROFIT, width = 62, justify = "RIGHT" },
+        { title = L.COL_POINT, width = 62, justify = "RIGHT" },
+    }, {
+        rowHeight = 26,
         onEnter = function(row, d)
             GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
             local r = d.eval.recipe
@@ -39,19 +38,20 @@ local function buildRecipes()
             GameTooltip:Show()
         end,
     })
-    f.list:SetPoint("TOPLEFT", 14, -50)
-    f.list:SetPoint("RIGHT", -14, 0)
-    f.list:SetHeight(12 * 22)
-    f.planTitle = UI.Text(f, "GameFontNormal")
-    f.planTitle:SetPoint("TOPLEFT", 16, -322)
+    f.list:SetPoint("TOPLEFT", 4, -46)
+    f.list:SetPoint("RIGHT", -4, 0)
+    f.list:SetHeight(300)
+    UI.Divider(f, -352)
+    f.planTitle = UI.Heading(f, "")
+    f.planTitle:SetPoint("TOPLEFT", 16, -362)
     local planBox = CreateFrame("Frame", nil, f)
-    planBox:SetPoint("TOPLEFT", 16, -340)
-    planBox:SetSize(400, 100)
-    f.plan = UI.Lines(planBox, 6, 400)
-    f.shopping = UI.Button(f, L.BTN_SHOPPING, 150, function() ns.RecipesModule.ShoppingList() end, L.TIP_SHOPPING)
-    f.shopping:SetPoint("BOTTOMLEFT", 16, 14)
-    f.craft = UI.Button(f, L.BTN_CRAFT_NEXT, 160, function() ns.RecipesModule.CraftNext() end, L.TIP_CRAFT_NEXT)
+    planBox:SetPoint("TOPLEFT", 16, -384)
+    planBox:SetSize(448, 110)
+    f.plan = UI.Lines(planBox, 6, 448)
+    f.craft = UI.Button(f, L.BTN_CRAFT_NEXT, 170, function() ns.RecipesModule.CraftNext() end, L.TIP_CRAFT_NEXT, "primary")
     f.craft:SetPoint("BOTTOMRIGHT", -16, 14)
+    f.shopping = UI.Button(f, L.BTN_SHOPPING, 130, function() ns.RecipesModule.ShoppingList() end, L.TIP_SHOPPING)
+    f.shopping:SetPoint("RIGHT", f.craft, "LEFT", -6, 0)
     f:Hide()
     return f
 end
@@ -60,7 +60,7 @@ local function refreshRecipes()
     local cur = ns.RecipesModule.current
     if not cur then return end
     local rows, plan = ns.RecipesModule.Evaluate()
-    recipes.title:SetText(L.RECIPES_TITLE:format(cur.name or "?", cur.skill, cur.maxSkill))
+    recipes:SetTitle("Barysh", L.RECIPES_TITLE:format(cur.name or "?", cur.skill, cur.maxSkill))
     local data = {}
     for _, e in ipairs(rows) do
         local r = e.recipe

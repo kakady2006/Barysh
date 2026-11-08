@@ -55,7 +55,7 @@ function M.Build()
                 price = AH.RoundPostPrice(price)
                 local cheaper, same = Selling.Ahead(lots, price)
                 e.commodity = Items.IsCommodity(e.itemID)
-                e.price, e.warn, e.cost = price, warn, cost
+                e.price, e.warn, e.cost, e.ahead = price, warn, cost, cheaper
                 e.returned = returned and true or nil
                 e.duration = Selling.Duration(price, e.qty, cheaper + same, summary.perDay, s.expensive)
                 e.sizes = Selling.Split(e.qty, e.commodity, s.stack)

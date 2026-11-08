@@ -3,9 +3,13 @@ local _, ns = ...
 local UI = ns.UI
 local L = ns.L
 
--- Main window: the "Barysh" tab of the auction house (UI/AuctionTab.lua), the minimap button, the mailbox.
--- Tabs at the bottom; a disabled module removes its tab.
-local WIDTH, HEIGHT = 620, 560
+-- Main window. Two ways to show it:
+--   inside the auction house (the "Barysh" tab, UI/AuctionTab.lua): it fills the auction house, no frame of
+--   its own, the sections are chips under the header (like other auction house addons);
+--   on its own (minimap button, mailbox): a window with the sections as tabs under it (barysh-design).
+-- A disabled module removes its section.
+local WIDTH, HEIGHT = 780, 540
+UI.WIDTH, UI.HEIGHT = WIDTH, HEIGHT
 
 UI.tabs = {}      -- registered tab definitions, in order
 UI.current = nil
@@ -21,19 +25,34 @@ local function tabAvailable(def)
     return not def.module or (ns.modules[def.module] and ns.modules[def.module].enabled)
 end
 
+-- Section switches: chips (inside the auction house) and tabs under the window (on its own).
 local function layoutTabs()
-    local prev
+    local prevChip, prevTab
     for _, def in ipairs(UI.tabs) do
-        local b = def.button
+        local chip, tab = def.chip, def.button
         if tabAvailable(def) then
-            b:ClearAllPoints()
-            if prev then b:SetPoint("LEFT", prev, "RIGHT", 2, 0) else b:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 10, 2) end
-            b:Show()
-            prev = b
+            chip:ClearAllPoints()
+            if prevChip then chip:SetPoint("LEFT", prevChip, "RIGHT", 4, 0) else chip:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -94) end
+            tab:ClearAllPoints()
+            if prevTab then tab:SetPoint("LEFT", prevTab, "RIGHT", 2, 0) else tab:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 10, 1) end
+            chip:SetShown(frame.embedded)
+            tab:SetShown(not frame.embedded)
+            prevChip, prevTab = chip, tab
         else
-            b:Hide()
+            chip:Hide()
+            tab:Hide()
         end
     end
+end
+
+local function placeContent()
+    for _, def in ipairs(UI.tabs) do
+        local c = def.content
+        c:ClearAllPoints()
+        c:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, frame.embedded and -124 or -96)
+        c:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)
+    end
+    frame.navLine:SetShown(frame.embedded)
 end
 
 function UI.SelectTab(id)
@@ -41,20 +60,26 @@ function UI.SelectTab(id)
     for _, def in ipairs(UI.tabs) do
         local on = def.id == id and tabAvailable(def)
         def.content:SetShown(on)
-        def.button:SetEnabled(not on)
+        def.chip:SetOn(on)
+        def.button:SetOn(on)
         if on then UI.current = def end
     end
     UI.Refresh()
 end
 
+local function houseName()
+    local key = ns.Prices.DefaultKey()
+    if ns.AH.IsNeutralKey(key) then return L.HOUSE_NEUTRAL end
+    return UnitFactionGroup("player") == "Alliance" and L.HOUSE_ALLIANCE or L.HOUSE_HORDE
+end
+
 local function updateHeader()
     local scan = ns.Scan
-    local key = ns.Prices.DefaultKey()
-    local house = ns.AH.IsNeutralKey(key) and L.HOUSE_NEUTRAL or (UnitFactionGroup("player") == "Alliance" and L.HOUSE_ALLIANCE or L.HOUSE_HORDE)
-    frame.house:SetText(L.HOUSE:format(house))
+    local section = UI.current and UI.current.label or ""
+    frame:SetTitle("Barysh", section .. "  ·  " .. L.HOUSE:format(houseName()))
     frame.gold:SetText(L.FREE_GOLD:format(ns.FormatMoney(GetMoney())))
 
-    local h = ns.db.ah[key]
+    local h = ns.db.ah[ns.Prices.DefaultKey()]
     local last = h and h.lastFull
     local status
     if scan.state == "waiting" then
@@ -79,7 +104,7 @@ local function updateHeader()
     end
     if ns.Sync.enabled then
         local age = ns.Sync.MarketAge()
-        sub = sub .. " · " .. L.SYNCED:format(age and ns.FormatAge(age) or L.NEVER)
+        sub = sub .. "  ·  " .. L.SYNCED:format(age and ns.FormatAge(age) or L.NEVER)
     end
     frame.sub:SetText(sub)
     frame.fullScan:SetEnabled(scan.ahOpen and scan.state == "idle" and left == 0)
@@ -93,53 +118,72 @@ function UI.Refresh()
     if def and def.refresh and tabAvailable(def) then ns.Safe(def.refresh, def.content) end
 end
 
+-- Inside the auction house (true) or on its own (false).
+function UI.SetEmbedded(on)
+    local f = UI.Frame()
+    f.embedded = on and true or nil
+    if on then
+        f:SetBackdropBorderColor(0, 0, 0, 0)
+        f:SetBackdropColor(UI.RGB(UI.COLOR.bg))
+    else
+        UI.Flat(f, UI.COLOR.bg, UI.COLOR.edge, 2)
+        f:SetSize(WIDTH, HEIGHT)
+    end
+    f.close:SetShown(not on)
+    placeContent()
+    layoutTabs()
+end
+
+local function sectionTab(parent, text, onClick)
+    -- Tab under the window: like a chip, flat top edge (barysh-design .tab).
+    local b = UI.Chip(parent, text, onClick)
+    b:SetHeight(26)
+    return b
+end
+
 local function build()
     frame = UI.Window("BaryshMainFrame", WIDTH, HEIGHT)
     frame:SetPoint("CENTER")
     frame:Hide()
 
-    local title = UI.Text(frame, "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 16, -14)
-    title:SetText("Barysh")
-    frame.house = UI.Text(frame, "GameFontHighlightSmall")
-    frame.house:SetPoint("LEFT", title, "RIGHT", 12, 0)
     frame.gold = UI.Text(frame, "GameFontHighlightSmall")
-    frame.gold:SetPoint("TOPRIGHT", -40, -16)
+    frame.gold:SetPoint("RIGHT", frame.close, "LEFT", -96, 0)
+    frame.settings = UI.Button(frame, L.BTN_SETTINGS, 84, function() UI.ToggleSettings() end, L.TIP_SETTINGS)
+    frame.settings:SetHeight(22)
+    frame.settings:SetPoint("RIGHT", frame.close, "LEFT", -6, 0)
 
+    -- scan status and actions
     frame.status = UI.Text(frame, "GameFontHighlightSmall")
-    frame.status:SetPoint("TOPLEFT", 16, -40)
-    frame.sub = UI.Text(frame, "GameFontDisableSmall")
-    frame.sub:SetPoint("TOPLEFT", 16, -56)
-
-    frame.settings = UI.Button(frame, L.BTN_SETTINGS, 90, function() UI.ToggleSettings() end, L.TIP_SETTINGS)
-    frame.settings:SetPoint("TOPRIGHT", -16, -42)
-    frame.save = UI.Button(frame, L.BTN_SAVE, 90, function() ReloadUI() end, L.TIP_SAVE)
-    frame.save:SetPoint("RIGHT", frame.settings, "LEFT", -4, 0)
-    frame.quickScan = UI.Button(frame, L.BTN_QUICK, 90, function()
+    frame.status:SetPoint("TOPLEFT", 16, -52)
+    frame.sub = UI.Hint(frame, "")
+    frame.sub:SetPoint("TOPLEFT", 16, -68)
+    frame.save = UI.Button(frame, L.BTN_SAVE, 96, function() ReloadUI() end, L.TIP_SAVE)
+    frame.save:SetPoint("TOPRIGHT", -14, -54)
+    frame.quickScan = UI.Button(frame, L.BTN_QUICK, 86, function()
         local ok, why = ns.Scan.StartQuick()
         if not ok then ns.Print(L["SCAN_FAIL_" .. why] or why) end
     end, L.TIP_QUICK)
-    frame.quickScan:SetPoint("RIGHT", frame.save, "LEFT", -4, 0)
-    frame.fullScan = UI.Button(frame, L.BTN_FULL_SCAN, 110, function()
+    frame.quickScan:SetPoint("RIGHT", frame.save, "LEFT", -6, 0)
+    frame.fullScan = UI.Button(frame, L.BTN_FULL_SCAN, 112, function()
         local ok, why, left = ns.Scan.StartFull("button")
         if not ok then
             ns.Print(why == "cooldown" and L.SCAN_FAIL_cooldown:format(ns.FormatCountdown(left)) or (L["SCAN_FAIL_" .. why] or why))
         end
-    end, L.TIP_FULL_SCAN)
-    frame.fullScan:SetPoint("RIGHT", frame.quickScan, "LEFT", -4, 0)
+    end, L.TIP_FULL_SCAN, "primary")
+    frame.fullScan:SetPoint("RIGHT", frame.quickScan, "LEFT", -6, 0)
+    UI.Divider(frame, -86)
+    frame.navLine = UI.Divider(frame, -118)
 
     for _, def in ipairs(UI.tabs) do
         local content = CreateFrame("Frame", nil, frame)
-        content:SetPoint("TOPLEFT", 14, -80)
-        content:SetPoint("BOTTOMRIGHT", -14, 14)
         content:Hide()
         def.content = content
-        if def.build then ns.Safe(def.build, content) end
-        local b = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-        b:SetText(def.label)
-        b:SetSize(math.max(64, (b:GetFontString() and b:GetFontString():GetStringWidth() or 40) + 20), 24)
-        b:SetScript("OnClick", function() UI.SelectTab(def.id) end)
-        def.button = b
+        def.chip = UI.Chip(frame, def.label, function() UI.SelectTab(def.id) end)
+        def.button = sectionTab(frame, def.label, function() UI.SelectTab(def.id) end)
+    end
+    placeContent()
+    for _, def in ipairs(UI.tabs) do
+        if def.build then ns.Safe(def.build, def.content) end
     end
 
     frame:SetScript("OnShow", function()
@@ -147,7 +191,7 @@ local function build()
         if not UI.current or not tabAvailable(UI.current) then
             UI.SelectTab(UI.tabs[1] and UI.tabs[1].id)
         else
-            UI.Refresh()
+            UI.SelectTab(UI.current.id)
         end
     end)
     -- Countdown and statuses tick once a second while the window is open.

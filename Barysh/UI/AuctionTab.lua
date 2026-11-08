@@ -8,43 +8,37 @@ local UI = ns.UI
 -- Auctionator's tabs; without it Barysh makes its own tab after the game's tabs.
 
 local TAB_ID = "Barysh"
-local WIDTH, HEIGHT = 620, 560 -- the main window, see UI/MainFrame.lua
 
 local host, ownTab
 
+-- The window fills the auction house below its title, above its money line, with no frame of its own.
 local function embed()
     local f = UI.Frame()
-    f.embedded = true
     f:SetParent(host)
     f:SetFrameStrata(AuctionHouseFrame:GetFrameStrata() or "MEDIUM")
     f:SetFrameLevel((host:GetFrameLevel() or 0) + 5)
-    local w, h = host:GetWidth(), host:GetHeight()
-    local scale = 1
-    if w and h and w > 0 and h > 0 then scale = math.min(1, w / WIDTH, h / HEIGHT) end
-    f:SetScale(scale)
+    f:SetScale(1)
     f:ClearAllPoints()
-    f:SetPoint("TOP", host, "TOP", 0, 0)
-    if f.close then f.close:Hide() end
+    f:SetAllPoints(host)
+    UI.SetEmbedded(true)
     UI.Show()
 end
 
 local function release()
     local f = UI.Frame()
     if not f.embedded then return end
-    f.embedded = nil
     f:Hide()
     f:SetParent(UIParent)
-    f:SetScale(1)
     f:SetFrameStrata("HIGH")
-    if f.close then f.close:Show() end
     f:ClearAllPoints()
     f:SetPoint("CENTER")
+    UI.SetEmbedded(false)
 end
 
 local function createHost()
     host = CreateFrame("Frame", "BaryshAuctionHost", AuctionHouseFrame)
     host:SetPoint("TOPLEFT", AuctionHouseFrame, "TOPLEFT", 4, -24)
-    host:SetPoint("BOTTOMRIGHT", AuctionHouseFrame, "BOTTOMRIGHT", -4, 4)
+    host:SetPoint("BOTTOMRIGHT", AuctionHouseFrame, "BOTTOMRIGHT", -4, 28)
     host:Hide()
     host:SetScript("OnShow", function() ns.Safe(embed) end)
     host:SetScript("OnHide", function() ns.Safe(release) end)
