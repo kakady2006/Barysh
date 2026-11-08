@@ -150,6 +150,8 @@ function build.core(l)
     l:Cycle(L.SET_STALE, { "staleHours" }, { { 12, "12 " .. L.UNIT_H }, { 24, "24 " .. L.UNIT_H }, { 48, "48 " .. L.UNIT_H } })
     l:Header(L.SET_TOOLTIP)
     l:Module("Tooltip")
+    l:Header(L.SET_WINDOW)
+    l:Check(L.SET_AUTO_OPEN, { "autoOpen" }, L.SET_AUTO_OPEN_TIP)
     l:Header(L.SET_MINIMAP)
     l:Check(L.SET_MINIMAP_HIDE, { "minimap", "hidden" })
 end

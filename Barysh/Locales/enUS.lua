@@ -499,4 +499,9 @@ ns.RegisterLocale("enUS", {
     DET_TOTAL = "%d lots give %s · on the auction: %s each",
     DET_SORTED = "\"Per unit\": lot price minus the rest of the outcome at market, per expected unit. \"Saving\": against buying the material.",
     DET_LOADING = "The game is still loading %d items: press Recalc in a few seconds",
+    SET_WINDOW = "Barysh window",
+    SET_AUTO_OPEN = "Open by itself",
+    SET_AUTO_OPEN_TIP = "At the mailbox and on a deal alert. Closing such a window with × clears this.",
+    AUTO_OPEN_OFF = "Barysh will no longer open by itself. To undo: settings, Core, \"Open by itself\".",
+    RECIPES_OFF = "The recipes panel will no longer open by itself. To undo: settings, Crafting, \"Show the panel\".",
 })

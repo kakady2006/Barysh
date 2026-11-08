@@ -290,7 +290,11 @@ function UI.Window(name, width, height)
     -- Not while it sits inside another window (the auction house tab).
     f:SetScript("OnDragStart", function(self) if not self.embedded then self:StartMoving() end end)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    local close = UI.Button(f, "×", 26, function() f:Hide() end)
+    -- f.onUserClose: called only for the player's click on ×, not for other hides.
+    local close = UI.Button(f, "×", 26, function()
+        f:Hide()
+        if f.onUserClose then ns.Safe(f.onUserClose) end
+    end)
     close:SetHeight(22)
     close:SetPoint("TOPRIGHT", -10, -10)
     f.close = close

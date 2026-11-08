@@ -16,6 +16,13 @@ local recipes
 local function buildRecipes()
     local f = UI.Window("BaryshRecipes", 480, 540)
     f:SetFrameStrata("MEDIUM")
+    -- Closed with ×: no longer opens by itself next to the profession window.
+    f.onUserClose = function()
+        if ns.settings.recipes.shown then
+            ns.settings.recipes.shown = false
+            ns.Print(L.RECIPES_OFF)
+        end
+    end
     f.list = UI.Table(f, {
         { title = L.COL_RECIPE, flex = true },
         { title = L.COL_REAGENTS, width = 62, justify = "RIGHT" },

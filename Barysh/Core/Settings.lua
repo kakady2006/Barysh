@@ -41,6 +41,7 @@ ns.defaults = {
     recipes = {
         shown = true,
     },
+    autoOpen = true, -- the window opens by itself at the mailbox and on a deal alert
     market = {
         house = "current",  -- current | faction | neutral | both
     },

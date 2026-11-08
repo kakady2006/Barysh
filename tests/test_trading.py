@@ -529,3 +529,38 @@ def test_window_opened_at_mailbox_closes_with_it(game):
     game.fire("MAIL_CLOSED")
     assert f.shown
     assert game.errors() == []
+
+
+def test_closed_with_x_does_not_open_by_itself_again(game):
+    f = game.ns.UI.Frame()
+    run(game, "MailFrame:Show()")
+    game.fire("MAIL_SHOW")
+    assert f.shown and game.ns.settings.autoOpen
+    f.close.Click(f.close)
+    assert not f.shown and not game.ns.settings.autoOpen
+    assert "больше не будет открываться сам" in "\n".join(to_py(game.mock.printed).values() if isinstance(to_py(game.mock.printed), dict) else to_py(game.mock.printed))
+    run(game, "MailFrame:Hide()")
+    game.fire("MAIL_CLOSED")
+    run(game, "MailFrame:Show()")
+    game.fire("MAIL_SHOW")
+    assert not f.shown
+    game.ns.UI.ShowAuto("deals")
+    assert not f.shown
+    # opened by hand and closed with ×: the setting stays as it is
+    game.ns.settings.autoOpen = True
+    game.ns.UI.Toggle()
+    f.close.Click(f.close)
+    assert game.ns.settings.autoOpen
+    assert game.errors() == []
+
+
+def test_recipes_panel_closed_with_x_stays_closed(game):
+    run(game, "ProfessionsFrame:Show()")
+    game.fire("TRADE_SKILL_SHOW")
+    panel = game.g.BaryshRecipes
+    panel.close.Click(panel.close)
+    assert not game.ns.settings.recipes.shown
+    game.fire("TRADE_SKILL_CLOSE")
+    game.fire("TRADE_SKILL_SHOW")
+    assert not panel.shown
+    assert game.errors() == []

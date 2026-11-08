@@ -148,6 +148,7 @@ local function build()
 
     frame.gold = UI.Text(frame, "GameFontHighlightSmall")
     frame.gold:SetPoint("RIGHT", frame.close, "LEFT", -96, 0)
+    frame.onUserClose = function() UI.OnMainUserClose() end
     frame.settings = UI.Button(frame, L.BTN_SETTINGS, 84, function() UI.ToggleSettings() end, L.TIP_SETTINGS)
     frame.settings:SetHeight(22)
     frame.settings:SetPoint("RIGHT", frame.close, "LEFT", -6, 0)
@@ -215,7 +216,19 @@ function UI.Toggle()
     if f.embedded then return end -- the auction house tab owns it now
     -- At the auction house the minimap button opens the Barysh tab.
     if not f:IsShown() and ns.Scan and ns.Scan.ahOpen and UI.SelectAuctionTab and UI.SelectAuctionTab() then return end
+    f.autoOpened = nil
     f:SetShown(not f:IsShown())
+end
+
+-- The player closed with × a window that had opened by itself: it no longer opens by itself
+-- (setting "Open by itself", the chat line says where).
+function UI.OnMainUserClose()
+    if not frame.autoOpened then return end
+    frame.autoOpened, frame.dockedTo = nil, nil
+    if ns.settings.autoOpen then
+        ns.settings.autoOpen = false
+        ns.Print(L.AUTO_OPEN_OFF)
+    end
 end
 
 -- Opens the window on a tab ("Needs attention" jumps, alerts).
@@ -285,8 +298,10 @@ function UI.ShowNear(anchor, tabId)
         if tabId then UI.SelectTab(tabId) end
         return
     end
+    if not ns.settings.autoOpen then return end
     dock(f, anchor)
     f.dockedTo = anchor
+    f.autoOpened = true
     watchAnchor(anchor)
     UI.Show(tabId)
     redockSoon(f, anchor)
@@ -294,17 +309,20 @@ end
 
 -- Opening by itself (deal alert): at the auction house on the Barysh page there, so it goes away with it.
 function UI.ShowAuto(tabId)
+    if not ns.settings.autoOpen then return end
     if ns.Scan and ns.Scan.ahOpen and UI.SelectAuctionTab and UI.SelectAuctionTab() then
         if tabId then UI.SelectTab(tabId) end
         return
     end
+    local shown = UI.Frame():IsShown()
     UI.Show(tabId)
+    if not shown then frame.autoOpened = true end
 end
 
 function UI.HideNear(anchor)
     local f = UI.Frame()
     if f.dockedTo == anchor then
-        f.dockedTo = nil
+        f.dockedTo, f.autoOpened = nil, nil
         f:Hide()
     end
 end
