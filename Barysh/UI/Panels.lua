@@ -219,3 +219,55 @@ function UI.TradeAsk(t, options)
     ask.trade = t
     ask:Show()
 end
+
+-- Mail settings ----------------------------------------------------------------------------------
+-- The mail options live on the open mailbox, under the game's window, not in the settings window.
+-- Shown even with the Mail module off, so it can be switched on right there.
+
+local mailBar
+
+function UI.MailSettingsBar()
+    if mailBar or not MailFrame then return mailBar end
+    local f = CreateFrame("Frame", "BaryshMailSettings", MailFrame, "BackdropTemplate")
+    f:SetSize(math.max(MailFrame:GetWidth() or 0, 340), 70)
+    f:SetPoint("TOPLEFT", MailFrame, "BOTTOMLEFT", 0, -2)
+    if f.SetBackdrop then
+        f:SetBackdrop({ bgFile = "Interface\Tooltips\UI-Tooltip-Background",
+            edgeFile = "Interface\Tooltips\UI-Tooltip-Border", edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+        f:SetBackdropColor(0, 0, 0, 0.8)
+    end
+    f.title = UI.Text(f, "GameFontNormalSmall")
+    f.title:SetPoint("TOPLEFT", 10, -7)
+    f.title:SetText("Barysh")
+    f.module = UI.Check(f, L.MAIL_SET_MODULE, function() return ns.IsModuleEnabled("Mail") end,
+        function(v) ns.SetModuleEnabled("Mail", v); UI.MailSettingsUpdate() end, L.MODTIP_Mail)
+    f.module:SetPoint("TOPLEFT", 6, -20)
+    f.stranger = UI.Check(f, L.SET_STRANGER, function() return ns.settings.mail.strangerWarn end,
+        function(v)
+            ns.settings.mail.strangerWarn = v
+            if UI.Refresh then UI.Refresh() end
+        end, L.SET_STRANGER_TIP)
+    f.stranger:SetPoint("TOPLEFT", 6, -42)
+    mailBar = f
+    return f
+end
+
+function UI.MailSettingsUpdate()
+    local f = mailBar
+    if not f then return end
+    f.module:Update()
+    f.stranger:Update()
+    local on = ns.IsModuleEnabled("Mail")
+    f.stranger:SetActive(on, not on and L.NEEDS_MODULE:format(L.MODULE_Mail) or nil)
+end
+
+local mailOwner = {}
+ns.RegisterEvent(mailOwner, "MAIL_SHOW", function()
+    if not ns.settings then return end
+    local f = UI.MailSettingsBar()
+    if f then
+        f:Show()
+        UI.MailSettingsUpdate()
+    end
+end)

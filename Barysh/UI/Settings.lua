@@ -251,8 +251,7 @@ end
 
 function build.money(l)
     l:Header(L.MODULE_Mail)
-    l:Module("Mail")
-    l:Check(L.SET_STRANGER, { "mail", "strangerWarn" }, nil, moduleOn("Mail"))
+    l:Note(L.SET_MAIL_ON_MAILBOX)
     l:Header(L.MODULE_Ledger)
     l:Module("Ledger")
 end

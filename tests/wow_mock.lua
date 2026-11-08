@@ -489,6 +489,7 @@ function AHX.GetCancelCost() return 0 end
 -- Mock.merchant = { {itemID, price, stack} }; selling uses a bag item while Mock.merchantOpen.
 Mock.merchant = {}
 MerchantFrame = newObject("Frame", "MerchantFrame")
+MailFrame = newObject("Frame", "MailFrame")
 function GetMerchantItemID(i) return Mock.merchant[i] and Mock.merchant[i][1] end
 function GetMerchantItemInfo(i)
     local m = Mock.merchant[i]

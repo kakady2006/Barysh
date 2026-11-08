@@ -518,3 +518,25 @@ def test_settings_reset_group(game):
     trade_btn.Click(trade_btn)
     win.reset.Click(win.reset)
     assert game.ns.settings.deals.minProfit == 100
+
+
+def test_mail_settings_on_mailbox(game):
+    make_mail(game)
+    bar = game.g.BaryshMailSettings
+    assert bar is not None and bar.stranger.GetChecked(bar.stranger)
+    # stranger warning off: gold mail is plain
+    bar.stranger.SetChecked(bar.stranger, False)
+    bar.stranger.GetScript(bar.stranger, "OnClick")(bar.stranger)
+    assert game.ns.settings.mail.strangerWarn is False
+    inbox = to_py(game.ns.Mail.ReadInbox())
+    assert [m["kind"] for m in inbox["other"]] == ["cod", "plain", "own"]
+    # the mail helper can be switched off and on right there
+    bar.module.SetChecked(bar.module, False)
+    bar.module.GetScript(bar.module, "OnClick")(bar.module)
+    assert not game.ns.IsModuleEnabled("Mail")
+    game.fire("MAIL_SHOW")
+    assert game.g.BaryshMailSettings.IsShown(game.g.BaryshMailSettings)
+    bar.module.SetChecked(bar.module, True)
+    bar.module.GetScript(bar.module, "OnClick")(bar.module)
+    assert game.ns.IsModuleEnabled("Mail")
+    assert game.errors() == []
