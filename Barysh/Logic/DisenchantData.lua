@@ -18,6 +18,14 @@ local M = {
 
 ns.DisenchantData = {
     materials = M,
+    -- Materials in the order the picker shows them: dust, essences, shards, crystal.
+    order = {
+        M.STRANGE_DUST, M.SOUL_DUST, M.VISION_DUST, M.DREAM_DUST, M.ILLUSION_DUST,
+        M.LESSER_MAGIC, M.GREATER_MAGIC, M.LESSER_ASTRAL, M.GREATER_ASTRAL, M.LESSER_MYSTIC, M.GREATER_MYSTIC,
+        M.LESSER_NETHER, M.GREATER_NETHER, M.LESSER_ETERNAL, M.GREATER_ETERNAL,
+        M.SMALL_GLIMMERING, M.LARGE_GLIMMERING, M.SMALL_GLOWING, M.LARGE_GLOWING,
+        M.SMALL_RADIANT, M.LARGE_RADIANT, M.SMALL_BRILLIANT, M.LARGE_BRILLIANT, M.NEXUS_CRYSTAL,
+    },
     -- Uncommon (green): by max item level. dust / essence / shard = { itemID, min, max }.
     -- Armor: 75% dust, 20% essence, 5% shard; weapons swap dust and essence chances.
     uncommon = {

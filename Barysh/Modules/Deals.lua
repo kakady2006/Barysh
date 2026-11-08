@@ -131,6 +131,57 @@ function M.Summary(affordable)
     return Deals.Summary(open, affordable and GetMoney() or nil)
 end
 
+-- Disenchanting for one material ---------------------------------------------------------------
+-- "I need Dream Dust": lots on the auction that disenchant into it, cheapest material first.
+-- Kept until the material, the house or the scan changes; Recalc drops it.
+
+function M.MaterialPrice(materialID, key)
+    local s = ns.Prices.Item(materialID, key)
+    return s.current or s.market
+end
+
+function M.ForMaterial(materialID, key, force)
+    key = key or ns.Prices.DefaultKey()
+    local h = ns.db.ah[key]
+    if not h or not materialID then return {}, 0 end
+    local c = M.matCache
+    if not force and c and c.materialID == materialID and c.key == key and c.snap == h.snap
+        and c.lastAny == h.lastAny then
+        return c.rows, c.loading
+    end
+    local cut = AH.Cut(key)
+    local noBuy = ns.settings.lists.noBuy.items
+    local candidates, loading = {}, 0
+    for id, packed in pairs(h.snap) do
+        if not noBuy[id] then
+            local info = Items.Info(id)
+            if not info then
+                loading = loading + 1
+            elseif Disenchant.IsDisenchantable(info.classID, info.quality) then
+                local outcomes = Disenchant.Outcomes(info.classID, info.quality, info.ilvl)
+                if Disenchant.Yield(outcomes, materialID) > 0 then
+                    local other = {}
+                    for _, o in ipairs(outcomes) do
+                        if o.itemID ~= materialID then other[#other + 1] = o end
+                    end
+                    local ov = Disenchant.Value(other, function(mid) return ns.Prices.Value(mid, key) end) or 0
+                    candidates[#candidates + 1] = {
+                        itemID = id, outcomes = outcomes, lots = Lots.Decode(packed), other = ns.Money.AfterCut(ov, cut),
+                    }
+                end
+            end
+        end
+    end
+    local rows = Disenchant.ForMaterial(candidates, materialID, M.MaterialPrice(materialID, key))
+    for _, r in ipairs(rows) do
+        r.type, r.commodity, r.key = "disenchant", false, key
+    end
+    M.key = M.key or key
+    M.matCache = { materialID = materialID, key = key, snap = h.snap, lastAny = h.lastAny,
+        rows = rows, loading = loading }
+    return rows, loading
+end
+
 -- Alerts ------------------------------------------------------------------------------------
 
 M.alerted = {}

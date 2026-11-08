@@ -133,6 +133,131 @@ UI.RegisterTab({
     end,
 })
 
+-- Disenchanting for one material -----------------------------------------------------------------
+-- Pick a material on the left (Dream Dust...), the lots that disenchant into it are on the right,
+-- cheapest material first. Buying goes through the deals buyer.
+
+local MATERIALS = ns.DisenchantData.order
+
+local function yieldText(y)
+    if y >= 10 or math.abs(y - math.floor(y + 0.5)) < 0.05 then return ("≈%d"):format(math.floor(y + 0.5)) end
+    return ("≈%.1f"):format(y)
+end
+
+local function buyButton()
+    return {
+        width = 74,
+        text = function(d)
+            local st = ns.DealsModule.ButtonState(d)
+            if st == "confirm" then return L.BTN_CONFIRM end
+            return st == "search" and L.BTN_FIND or (st == "gone" and L.BTN_GONE or L.BTN_BUY)
+        end,
+        enabled = function(d)
+            local st = ns.DealsModule.ButtonState(d)
+            return st == "buy" or st == "search" or st == "confirm"
+        end,
+        onClick = function(d) ns.DealsModule.Buy(d) end,
+    }
+end
+
+UI.RegisterTab({
+    id = "detarget", label = L.TAB_DETARGET, module = "Deals",
+    build = function(c)
+        c.mats = UI.Table(c, {
+            { title = L.COL_MATERIAL, flex = true },
+            { title = L.COL_NOW, width = 64, justify = "RIGHT" },
+        }, {
+            rowHeight = 24,
+            onSelect = function(d)
+                ns.db.deTarget = d.itemID
+                UI.Refresh()
+            end,
+        })
+        c.mats:SetPoint("TOPLEFT")
+        c.mats:SetPoint("BOTTOMLEFT")
+        c.mats:SetWidth(220)
+
+        c.foot = footer(c, 46)
+        c.foot:ClearAllPoints()
+        c.foot:SetPoint("BOTTOMLEFT", c.mats, "BOTTOMRIGHT", 12, 0)
+        c.foot:SetPoint("BOTTOMRIGHT")
+        c.buyNext = UI.Button(c.foot, L.BTN_BUY_NEXT, 160, function()
+            local D = ns.DealsModule
+            if D.buying and D.buying.stage == "confirm" then
+                D.Buy(D.buying.row)
+            else
+                D.Buy(c.rows and c.rows[1])
+            end
+        end, L.TIP_BUY_NEXT, "primary")
+        c.buyNext:SetHeight(28)
+        c.buyNext:SetPoint("TOPRIGHT", 0, -10)
+        c.recalc = UI.Button(c.foot, L.BTN_RECALC, 100, function()
+            ns.DealsModule.ForMaterial(ns.db.deTarget, nil, true)
+            UI.Refresh()
+        end)
+        c.recalc:SetPoint("RIGHT", c.buyNext, "LEFT", -6, 0)
+
+        c.list = UI.Table(c, {
+            { title = L.COL_ITEM, flex = true },
+            { title = L.COL_PRICE, width = 70, justify = "RIGHT" },
+            { title = L.COL_YIELD, width = 52, justify = "RIGHT" },
+            { title = L.COL_PER_MATERIAL, width = 70, justify = "RIGHT" },
+            { title = L.COL_SAVING, width = 70, justify = "RIGHT" },
+        }, {
+            rowHeight = 34,
+            button = buyButton(),
+            onSelect = function(d) ns.DealsModule.Prepare(d) end,
+        })
+        c.list:SetPoint("TOPLEFT", c.mats, "TOPRIGHT", 12, 0)
+        c.list:SetPoint("BOTTOMRIGHT", c.foot, "TOPRIGHT", 0, 4)
+    end,
+    refresh = function(c)
+        local D = ns.DealsModule
+        local key = ns.Prices.DefaultKey()
+        local target = ns.db.deTarget or ns.DisenchantData.materials.STRANGE_DUST
+        local mats = {}
+        for _, id in ipairs(MATERIALS) do
+            local p = D.MaterialPrice(id, key)
+            local d = { itemID = id, cols = { Items.ColoredName(id), p and money(p) or "—" } }
+            mats[#mats + 1] = d
+            if id == target then c.mats.selected = d end
+        end
+        c.mats:SetData(mats)
+
+        local matPrice = D.MaterialPrice(target, key)
+        local rows, loading = D.ForMaterial(target, key)
+        local data = {}
+        for _, r in ipairs(rows) do
+            if not r.bought then
+                local info = Items.Info(r.itemID)
+                r.cols = {
+                    itemName(r.itemID, r.qty > 1 and (" ×" .. r.qty) or ""), money(r.cost), yieldText(r.yield),
+                    UI.Colorize(money(math.max(0, r.perUnit)), matPrice and r.perUnit < matPrice and "profit" or "muted"),
+                    r.profit and profitText(r.profit) or "—",
+                }
+                r.sub = info and L.DET_SUB:format(info.ilvl or 0) or ""
+                data[#data + 1] = r
+            end
+        end
+        c.rows = data
+        c.list:SetData(data)
+
+        local name = Items.ColoredName(target)
+        local h = ns.db.ah[key]
+        if not h or not h.lastAny then
+            c.foot.text:SetText(L.DEALS_NEED_SCAN)
+        elseif #data == 0 then
+            c.foot.text:SetText(L.DET_NONE:format(name))
+        else
+            c.foot.text:SetText(L.DET_TOTAL:format(#data, name, matPrice and money(matPrice) or "—"))
+        end
+        c.foot.hint:SetText(loading > 0 and L.DET_LOADING:format(loading) or L.DET_SORTED)
+        local confirming = D.buying and D.buying.stage == "confirm"
+        c.buyNext:SetText(confirming and L.BTN_CONFIRM_BUY:format(money(D.buying.row.cost)) or L.BTN_BUY_NEXT)
+        c.buyNext:SetEnabled(ns.Scan.ahOpen and ((#data > 0 and not D.buying) or confirming))
+    end,
+})
+
 -- Selling -------------------------------------------------------------------------------------
 
 UI.RegisterTab({

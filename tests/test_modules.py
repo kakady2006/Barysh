@@ -440,3 +440,23 @@ def test_disenchant_button_moves_with_shift_only(game):
     game.ns.Disenchanter.ResetPosition()
     assert game.ns.cdb.dePos is None
     assert game.errors() == []
+
+
+def test_lots_for_a_chosen_material(game):
+    open_ah(game)
+    set_replicate(game, MARKET)
+    full_scan(game)
+    D = game.ns.DealsModule
+    rows = to_py(D.ForMaterial(DUST)[0])
+    assert [r["itemID"] for r in rows] == [GLOVES]
+    assert rows[0]["yield"] == 3.75 and rows[0]["type"] == "disenchant"
+    assert to_py(D.ForMaterial(SHARD)[0])[0]["itemID"] == GLOVES
+    assert not to_py(D.ForMaterial(11176)[0])  # Dream Dust: nothing on this auction
+    ui = game.ns.UI
+    ui.Show()
+    ui.SelectTab("detarget")
+    game.mock.RunFrames(3)
+    game.g.BaryshDB.deTarget = DUST
+    ui.Refresh()
+    assert ui.current.id == "detarget"
+    assert game.errors() == []

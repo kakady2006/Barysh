@@ -100,3 +100,29 @@ def test_bound_items_disenchant_even_if_ah_price_higher(logic):
     rules.sellValue = lambda it: 500
     _, count = logic.ns.DisenchantPick.Next(items, rules)
     assert count == 1
+
+
+def test_yield_of_one_material(logic):
+    o = logic.ns.Disenchant.Outcomes(ARMOR, GREEN, 22)
+    assert logic.ns.Disenchant.Yield(o, STRANGE_DUST) == pytest.approx(3.75)
+    assert logic.ns.Disenchant.Yield(o, 99999) == 0
+
+
+def test_lots_for_one_material_cheapest_material_first(logic):
+    D = logic.ns.Disenchant
+    green = D.Outcomes(ARMOR, GREEN, 22)    # 3.75 dust
+    weapon = D.Outcomes(WEAPON, GREEN, 22)  # 1.0 dust
+    blue = D.Outcomes(ARMOR, BLUE, 22)      # no dust
+    cands = logic.to_lua([
+        {"itemID": 1, "outcomes": green, "other": 0, "lots": [{"qty": 1, "price": 3750}, {"qty": 2, "price": 2000}]},
+        {"itemID": 2, "outcomes": weapon, "other": 600, "lots": [{"qty": 1, "price": 1000}]},
+        {"itemID": 3, "outcomes": blue, "other": 0, "lots": [{"qty": 1, "price": 1}]},
+    ])
+    rows = to_py(D.ForMaterial(cands, STRANGE_DUST, 1000))
+    assert [(r["itemID"], r["perUnit"]) for r in rows] == [(2, 400), (1, 533), (1, 1000)]
+    # weapon: 1 dust worth 1000 + 600 of the rest - 1000 paid
+    assert rows[0]["profit"] == 600 and rows[0]["cost"] == 1000
+    # a stack of two: 7.5 dust for 4000
+    assert rows[1]["qty"] == 2 and rows[1]["yield"] == pytest.approx(7.5) and rows[1]["profit"] == 3500
+    # material price unknown: no saving
+    assert "profit" not in to_py(D.ForMaterial(cands, STRANGE_DUST, None))[0]

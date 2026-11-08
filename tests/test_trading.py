@@ -430,7 +430,7 @@ def test_every_tab_and_settings_group_render(game):
     bag(game, 1, LINEN, 20)
     ui = game.ns.UI
     ui.Show()
-    for tab in ("overview", "deals", "selling", "stock", "market", "ledger", "mail"):
+    for tab in ("overview", "deals", "detarget", "selling", "stock", "market", "ledger", "mail"):
         ui.SelectTab(tab)
         assert ui.current.id == tab
         game.mock.RunFrames(12)

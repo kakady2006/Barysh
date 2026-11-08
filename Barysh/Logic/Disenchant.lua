@@ -65,3 +65,47 @@ function Disenchant.Value(outcomes, priceOf)
     end
     return math.floor(value + 0.5), breakdown, complete
 end
+
+-- Expected count of one material from one disenchant (0 when it never drops).
+function Disenchant.Yield(outcomes, materialID)
+    local n = 0
+    for _, o in ipairs(outcomes or {}) do
+        if o.itemID == materialID then n = n + o.chance * (o.min + o.max) / 2 end
+    end
+    return n
+end
+
+-- Auction lots that disenchant into one material, cheapest material first.
+-- candidates = { { itemID, outcomes, lots = { {qty, price (unit)} }, other = value of the other
+--                  materials per disenchant, already after the cut } }
+-- matPrice = what one unit of the material costs on the auction now (nil = unknown).
+-- Each row: itemID, qty, maxPrice (unit), cost, yield (material from the whole lot),
+--   perUnit = cost of one material after selling the rest, profit = against buying the material
+--   (nil when matPrice is unknown).
+function Disenchant.ForMaterial(candidates, materialID, matPrice)
+    local rows = {}
+    for _, c in ipairs(candidates) do
+        local y = Disenchant.Yield(c.outcomes, materialID)
+        if y > 0 then
+            for _, l in ipairs(c.lots or {}) do
+                if l.qty > 0 and l.price > 0 then
+                    local cost = l.price * l.qty
+                    local other = (c.other or 0) * l.qty
+                    local yield = y * l.qty
+                    local row = {
+                        itemID = c.itemID, qty = l.qty, maxPrice = l.price, cost = cost, yield = yield,
+                        perUnit = math.floor((cost - other) / yield + 0.5),
+                    }
+                    if matPrice then row.profit = math.floor(yield * matPrice + other - cost + 0.5) end
+                    rows[#rows + 1] = row
+                end
+            end
+        end
+    end
+    table.sort(rows, function(a, b)
+        if a.perUnit ~= b.perUnit then return a.perUnit < b.perUnit end
+        if a.itemID ~= b.itemID then return a.itemID < b.itemID end
+        return a.cost < b.cost
+    end)
+    return rows
+end
